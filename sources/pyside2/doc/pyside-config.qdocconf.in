@@ -1,0 +1,14 @@
+buildversion              = @PYSIDE_QT_VERSION@
+navigation.homepage       = Qt for Python
+
+outputdir                 = @DOC_DATA_DIR@
+outputformats             = WebXML
+WebXML.quotinginformation = true
+WebXML.nosubdirs          = true
+WebXML.outputsubdir       = webxml
+
+spurious                 += "Hostile character .*"
+
+includepaths += \
+    -I @QT_INCLUDE_DIR@ \
+    -I @mkspecInclude@ \

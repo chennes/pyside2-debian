@@ -17,8 +17,8 @@ if (USE_PYTHON_VERSION)
     find_package(PythonInterp ${USE_PYTHON_VERSION} REQUIRED)
     find_package(PythonLibs ${USE_PYTHON_VERSION} REQUIRED)
 else()
-    find_package(PythonInterp 2.6)
-    find_package(PythonLibs 2.6)
+    find_package(PythonInterp 2.7)
+    find_package(PythonLibs 2.7)
 endif()
 
 set(PYSIDE_VERSION_FILE_PATH "${CMAKE_SOURCE_DIR}/pyside_version.py")
@@ -340,7 +340,10 @@ endif()
 if(WIN32)
     list(APPEND ALL_OPTIONAL_MODULES AxContainer)
 endif()
-list(APPEND ALL_OPTIONAL_MODULES WebChannel WebEngineCore WebEngineWidgets WebKit WebKitWidgets WebSockets)
+# Disabling WebKit by default
+#   If WebKit support is needed add the following elements
+#   to the list: WebKit WebKitWidgets
+list(APPEND ALL_OPTIONAL_MODULES WebChannel WebEngineCore WebEngineWidgets WebSockets)
 if (Qt5Core_VERSION VERSION_GREATER 5.9.3) # Depending on fixes in Qt3D
     list(APPEND ALL_OPTIONAL_MODULES 3DCore 3DRender 3DInput 3DLogic 3DAnimation 3DExtras)
 endif()
@@ -348,6 +351,14 @@ endif()
 # Modules to be built unless specified by -DMODULES on command line
 if (NOT MODULES)
     set(MODULES "${ALL_ESSENTIAL_MODULES};${ALL_OPTIONAL_MODULES}")
+endif()
+
+# Removing from the MODULES list the items that were defined with
+# -DSKIP_MODULES on command line
+if (SKIP_MODULES)
+    foreach(s ${SKIP_MODULES})
+        list(REMOVE_ITEM MODULES ${s})
+    endforeach()
 endif()
 
 foreach(m ${MODULES})

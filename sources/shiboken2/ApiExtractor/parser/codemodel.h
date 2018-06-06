@@ -98,6 +98,7 @@ QDebug operator<<(QDebug d, const CodeModel *m);
 
 class TypeInfo
 {
+    friend class TypeParser;
 public:
     TypeInfo() : flags(0), m_referenceType(NoReference) {}
 
@@ -110,6 +111,8 @@ public:
     {
         m_qualifiedName = qualified_name;
     }
+
+    bool isVoid() const;
 
     bool isConstant() const
     {
@@ -181,6 +184,8 @@ public:
     // ### arrays and templates??
 
     QString toString() const;
+
+    QStringList instantiationName() const;
 
     static TypeInfo combine(const TypeInfo &__lhs, const TypeInfo &__rhs);
     static TypeInfo resolveType(TypeInfo const &__type, CodeModelItem __scope);

@@ -47,6 +47,8 @@ import os
 # Values must match COIN thrift
 CI_HOST_OS = option_value("os")
 CI_TARGET_OS = option_value("targetOs")
+CI_HOST_ARCH = option_value("hostArch")
+CI_TARGET_ARCH = option_value("targetArch")
 CI_HOST_OS_VER = option_value("osVer")
 CI_ENV_INSTALL_DIR = option_value("instdir")
 CI_ENV_AGENT_DIR = option_value("agentdir") or "."
@@ -60,7 +62,7 @@ if _ci_features is not None:
 CI_RELEASE_CONF = has_option("packaging")
 
 def call_testrunner(python_ver, buildnro):
-    _pExe, _env, env_pip, env_python = get_qtci_virtualEnv(python_ver, CI_HOST_OS)
+    _pExe, _env, env_pip, env_python = get_qtci_virtualEnv(python_ver, CI_HOST_OS, CI_HOST_ARCH, CI_TARGET_ARCH)
     rmtree(_env, True)
     run_instruction(["virtualenv", "-p", _pExe,  _env], "Failed to create virtualenv")
     install_pip_dependencies(env_pip, ["six", "wheel"])
@@ -70,6 +72,14 @@ def call_testrunner(python_ver, buildnro):
     run_instruction(cmd, "Failed to run testrunner.py")
 
 def run_test_instructions():
+    # Disable unsupported configs for now
+    if CI_HOST_OS_VER in ["WinRT_10"]:
+        print("Disabled " + CI_HOST_OS_VER + " from Coin configuration")
+        exit()
+    if CI_HOST_ARCH == "X86_64" and CI_TARGET_ARCH == "X86":
+        print("Disabled 32 bit build on 64 bit from Coin configuration, until toolchains provisioned")
+        exit()
+
     os.chdir(CI_ENV_AGENT_DIR)
     call_testrunner("", "0")
     # We know that second build was with python3

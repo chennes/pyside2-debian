@@ -146,6 +146,14 @@ TypeInfo TypeInfo::combine(const TypeInfo &__lhs, const TypeInfo &__rhs)
     return __result;
 }
 
+bool TypeInfo::isVoid() const
+{
+    return m_indirections == 0 && m_referenceType == NoReference
+        && m_arguments.isEmpty() && m_arrayElements.isEmpty()
+        && m_qualifiedName.size() == 1
+        && m_qualifiedName.constFirst() == QLatin1String("void");
+}
+
 TypeInfo TypeInfo::resolveType(TypeInfo const &__type, CodeModelItem __scope)
 {
     CodeModel *__model = __scope->model();
@@ -228,6 +236,20 @@ QString TypeInfo::toString() const
     }
 
     return tmp;
+}
+
+QStringList TypeInfo::instantiationName() const
+{
+    QStringList result = m_qualifiedName;
+    if (const int argumentCount = m_arguments.size()) {
+        QString &last = result.last();
+        for (int i = 0; i < argumentCount; ++i) {
+            last += i ? QLatin1String(", ") : QLatin1String("< ");
+            last += m_arguments.at(i).toString();
+        }
+        last += QLatin1String(" >");
+    }
+    return result;
 }
 
 bool TypeInfo::operator==(const TypeInfo &other) const

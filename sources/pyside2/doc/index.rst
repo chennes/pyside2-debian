@@ -26,7 +26,7 @@ Qt Modules
      - `Qt OpenGL <PySide2/QtOpenGL/index.html>`_
         Offers classes that make it easy to use OpenGL in Qt applications.
    * - `Qt PrintSupport <PySide2/QtPrintSupport/index.html>`_
-        Offers classes that make it easy to use OpenGL in Qt applications.
+        Provides extensive cross-platform support for printing.
      - `Qt Qml <PySide2/QtQml/index.html>`_
         Python API for Qt QML.
    * - `Qt Charts <PySide2/QtCharts/index.html>`_
@@ -61,6 +61,10 @@ Qt Modules
      - `Qt AxContainer <PySide2/QtAxContainer/index.html>`_
         Provides QAxObject and QAxWidget which act as
         containers for COM objects and ActiveX controls.
+   * - `Qt WebEngineCore <PySide2/QtWebEngineCore/index.html>`_
+        Provides the core functionality to integrate web content
+     - `Qt WebEngineWidgets <PySide2/QtWebEngineWidgets/index.html>`_
+        Provides widgets that can handle web content
    * - `Qt WebChannel <PySide2/QtWebChannel/index.html>`_
         Enables peer-to-peer communication between a server and a client
         (HTML/JavaScript or QML application).
@@ -75,7 +79,7 @@ Qt Modules
    * - `Qt X11Extras <PySide2/QtX11Extras/index.html>`_
         Provides information about the X display configuration.
      - `Qt Xml <PySide2/QtXml/index.html>`_
-        Provides a stream reader and writer for XML documents.
+        Provides C++ implementations of SAX and DOM.
    * - `Qt XmlPatterns <PySide2/QtXmlPatterns/index.html>`_
         Provides support for XPath, XQuery, XSLTi, and XML Schema validation.
      - `Qt 3D Core <PySide2/Qt3DCore/index.html>`_
@@ -94,7 +98,8 @@ Qt Modules
         Helps you create viable mapping solutions using the data available from some of the popular location services.
    * - `Qt Sensors <PySide2/QtSensors/index.html>`_
         Provides access to sensor hardware via QML and Python interfaces and a motion gesture recognition API for devices.
-     -
+     - `Qt Scxml <PySide2/QtScxml/index.html>`_
+        Provides classes to create and use state machines from SCXML files.
 
 |project| also comes with the
 :doc:`Shiboken2 <shiboken2:contents>` generator that outputs C++ code

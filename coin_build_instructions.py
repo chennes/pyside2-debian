@@ -42,11 +42,14 @@ from build_scripts.utils import install_pip_dependencies
 from build_scripts.utils import get_qtci_virtualEnv
 from build_scripts.utils import run_instruction
 from build_scripts.utils import rmtree
+from build_scripts.utils import get_python_dict
 import os
 
 # Values must match COIN thrift
 CI_HOST_OS = option_value("os")
 CI_TARGET_OS = option_value("targetOs")
+CI_HOST_ARCH = option_value("hostArch")
+CI_TARGET_ARCH = option_value("targetArch")
 CI_HOST_OS_VER = option_value("osVer")
 CI_ENV_INSTALL_DIR = option_value("instdir")
 CI_ENV_AGENT_DIR = option_value("agentdir")
@@ -58,9 +61,39 @@ if _ci_features is not None:
         CI_FEATURES.append(f)
 CI_RELEASE_CONF = has_option("packaging")
 
+def get_current_script_path():
+    """ Returns the absolute path containing this script. """
+    try:
+        this_file = __file__
+    except NameError:
+        this_file = sys.argv[0]
+    this_file = os.path.abspath(this_file)
+    return os.path.dirname(this_file)
+
+def is_snapshot_build():
+    """
+    Returns True if project needs to be built with --snapshot-build
+
+    This is true if the version found in pyside_version.py is not a
+    pre-release version (no alphas, betas).
+
+    This eliminates the need to remove the --snapshot-build option
+    on a per-release branch basis (less things to remember to do
+    for a release).
+    """
+    setup_script_dir = get_current_script_path()
+    pyside_version_py = os.path.join(
+        setup_script_dir, "sources", "pyside2", "pyside_version.py")
+    d = get_python_dict(pyside_version_py)
+
+    pre_release_version_type = d['pre_release_version_type']
+    pre_release_version = d['pre_release_version']
+    if pre_release_version or pre_release_version_type:
+        return True
+    return False
 
 def call_setup(python_ver):
-    _pExe, _env, env_pip, env_python = get_qtci_virtualEnv(python_ver, CI_HOST_OS)
+    _pExe, _env, env_pip, env_python = get_qtci_virtualEnv(python_ver, CI_HOST_OS, CI_HOST_ARCH, CI_TARGET_ARCH)
     rmtree(_env, True)
     run_instruction(["virtualenv", "-p", _pExe,  _env], "Failed to create virtualenv")
     install_pip_dependencies(env_pip, ["six", "wheel"])
@@ -76,17 +109,28 @@ def call_setup(python_ver):
     elif CI_HOST_OS == "Windows":
 
         cmd += ["--qmake=" + CI_ENV_INSTALL_DIR + "\\bin\\qmake.exe",
-                "--openssl=C:\\openssl\\bin\\openssl"]
+                "--openssl=C:\\openssl\\bin"]
     else:
         cmd += ["--qmake=" + CI_ENV_INSTALL_DIR + "/bin/qmake"]
     cmd += ["--build-tests",
             "--jobs=4",
-            "--verbose-build",
-            "--snapshot-build"]
+            "--verbose-build"]
+    if python_ver == "3":
+        cmd += ["--limited-api=yes"]
+    if is_snapshot_build():
+        cmd += ["--snapshot-build"]
 
     run_instruction(cmd, "Failed to run setup.py")
 
 def run_build_instructions():
+    # Disable unsupported configs for now
+    if CI_HOST_OS_VER in ["WinRT_10"]:
+        print("Disabled " + CI_HOST_OS_VER + " from Coin configuration")
+        exit()
+    if CI_HOST_ARCH == "X86_64" and CI_TARGET_ARCH == "X86":
+        print("Disabled 32 bit build on 64 bit from Coin configuration, until toolchains provisioned")
+        exit()
+
     # Uses default python, hopefully we have python2 installed on all hosts
     call_setup("")
 

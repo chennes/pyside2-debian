@@ -64,7 +64,7 @@ def get_package_version():
         d['major_version'], d['minor_version'], d['patch_version'])
     pre_release_version_type = d['pre_release_version_type']
     pre_release_version = d['pre_release_version']
-    if pre_release_version and pre_release_version:
+    if pre_release_version and pre_release_version_type:
         final_version += pre_release_version_type + pre_release_version
 
     # Add the current timestamp to the version number, to suggest it
@@ -73,8 +73,20 @@ def get_package_version():
         final_version += ".dev{}".format(get_package_timestamp())
     return final_version
 
+def get_setuptools_extension_modules():
+    # Setting py_limited_api on the extension is the "correct" thing
+    # to do, but it doesn't actually do anything, because we
+    # override build_ext. So this is just foolproofing for the
+    # future.
+    extension_args = ('QtCore', [])
+    extension_kwargs = {}
+    if OPTION_LIMITED_API:
+        extension_kwargs['py_limited_api'] = True
+    extension_modules = [Extension(*extension_args, **extension_kwargs)]
+    return extension_modules
+
 # Buildable extensions.
-containedModules = ['shiboken2', 'pyside2', 'pyside2-tools']
+contained_modules = ['shiboken2', 'pyside2', 'pyside2-tools']
 
 # Git submodules: ["submodule_name",
 #   "location_relative_to_sources_folder"]
@@ -113,19 +125,12 @@ from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 from setuptools.command.develop import develop as _develop
 from setuptools.command.build_py import build_py as _build_py
 
-wheel_module_exists = False
-try:
-    from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
-    from wheel.bdist_wheel import safer_name as _safer_name
-    wheel_module_exists = True
-except ImportError:
-    pass
-
 from .qtinfo import QtInfo
-from .utils import rmtree, detectClang, copyfile, copydir, run_process_output, run_process
+from .utils import rmtree, detect_clang, copyfile, copydir, run_process_output, run_process
 from .utils import update_env_path, init_msvc_env, filter_match, macos_fix_rpaths_for_library
 from .platforms.unix import prepare_packages_posix
 from .platforms.windows_desktop import prepare_packages_win32
+from .wheel_override import wheel_module_exists, get_bdist_wheel_override
 
 from textwrap import dedent
 
@@ -148,7 +153,7 @@ def check_allowed_python_version():
 
 check_allowed_python_version()
 
-qtSrcDir = ''
+qt_src_dir = ''
 
 # This is used automatically by distutils.command.install object, to
 # specify final installation location.
@@ -225,9 +230,9 @@ def is_debug_python():
 
 # Return a prefix suitable for the _install/_build directory
 def prefix():
-    virtualEnvName = os.environ.get('VIRTUAL_ENV', None)
-    if virtualEnvName is not None:
-        name = os.path.basename(virtualEnvName)
+    virtual_env_name = os.environ.get('VIRTUAL_ENV', None)
+    if virtual_env_name is not None:
+        name = os.path.basename(virtual_env_name)
     else:
         name = "pyside"
     name += str(sys.version_info[0])
@@ -238,14 +243,14 @@ def prefix():
     return name
 
 # Initialize, pull and checkout submodules
-def prepareSubModules():
+def prepare_sub_modules():
     print("Initializing submodules for PySide2 version: {}".format(
         get_package_version()))
     submodules_dir = os.path.join(setup_script_dir, "sources")
 
     # Create list of [name, desired branch, absolute path, desired
     # branch] and determine whether all submodules are present
-    needInitSubModules = False
+    need_init_sub_modules = False
 
     for m in submodules:
         module_name = m[0]
@@ -253,10 +258,10 @@ def prepareSubModules():
         module_dir = os.path.join(submodules_dir, module_dir, module_name)
         # Check for non-empty directory (repository checked out)
         if not os.listdir(module_dir):
-            needInitSubModules = True
+            need_init_sub_modules = True
             break
 
-    if needInitSubModules:
+    if need_init_sub_modules:
         git_update_cmd = ["git", "submodule", "update", "--init"]
         if run_process(git_update_cmd) != 0:
             m = ("Failed to initialize the git submodules: "
@@ -294,10 +299,10 @@ def get_qt_version():
 
     return qt_version
 
-def prepareBuild():
+def prepare_build():
     if (os.path.isdir(".git") and not OPTION_IGNOREGIT and
             not OPTION_ONLYPACKAGE and not OPTION_REUSE_BUILD):
-        prepareSubModules()
+        prepare_sub_modules()
     # Clean up temp and package folders
     for n in [pyside_package_dir_name, "build"]:
         d = os.path.join(setup_script_dir, n)
@@ -317,17 +322,17 @@ def prepareBuild():
         os.makedirs(pkg_dir)
     # locate Qt sources for the documentation
     if OPTION_QT_SRC is None:
-        installPrefix = qtinfo.prefix_dir
-        if installPrefix:
-            global qtSrcDir
+        install_prefix = qtinfo.prefix_dir
+        if install_prefix:
+            global qt_src_dir
             # In-source, developer build
-            if installPrefix.endswith("qtbase"):
-                qtSrcDir = installPrefix
+            if install_prefix.endswith("qtbase"):
+                qt_src_dir = install_prefix
             else: # SDK: Use 'Src' directory
-                qtSrcDir = os.path.join(os.path.dirname(installPrefix),
+                qt_src_dir = os.path.join(os.path.dirname(install_prefix),
                     'Src', 'qtbase')
 
-class pyside_install(_install):
+class PysideInstall(_install):
     def __init__(self, *args, **kwargs):
         _install.__init__(self, *args, **kwargs)
 
@@ -352,7 +357,7 @@ class pyside_install(_install):
         _install.run(self)
         log.info('*** Install completed')
 
-class pyside_develop(_develop):
+class PysideDevelop(_develop):
 
     def __init__(self, *args, **kwargs):
         _develop.__init__(self, *args, **kwargs)
@@ -361,7 +366,7 @@ class pyside_develop(_develop):
         self.run_command("build")
         _develop.run(self)
 
-class pyside_bdist_egg(_bdist_egg):
+class PysideBdistEgg(_bdist_egg):
 
     def __init__(self, *args, **kwargs):
         _bdist_egg.__init__(self, *args, **kwargs)
@@ -370,7 +375,7 @@ class pyside_bdist_egg(_bdist_egg):
         self.run_command("build")
         _bdist_egg.run(self)
 
-class pyside_build_ext(_build_ext):
+class PysideBuildExt(_build_ext):
 
     def __init__(self, *args, **kwargs):
         _build_ext.__init__(self, *args, **kwargs)
@@ -378,40 +383,12 @@ class pyside_build_ext(_build_ext):
     def run(self):
         pass
 
-if wheel_module_exists:
-    class pyside_build_wheel(_bdist_wheel):
-        def __init__(self, *args, **kwargs):
-            _bdist_wheel.__init__(self, *args, **kwargs)
 
-        @property
-        def wheel_dist_name(self):
-            # Slightly modified version of wheel's wheel_dist_name
-            # method, to add the Qt version as well.
-            # Example:
-            #   PySide2-5.6-5.6.4-cp27-cp27m-macosx_10_10_intel.whl
-            # The PySide2 version is "5.6".
-            # The Qt version built against is "5.6.4".
-            qt_version = get_qt_version()
-            package_version = get_package_version()
-            wheel_version = "{}-{}".format(package_version, qt_version)
-            components = (_safer_name(self.distribution.get_name()),
-                wheel_version)
-            if self.build_number:
-                components += (self.build_number,)
-            return '-'.join(components)
-
-        def finalize_options(self):
-            if sys.platform == 'darwin':
-                # Override the platform name to contain the correct
-                # minimum deployment target.
-                # This is used in the final wheel name.
-                self.plat_name = pyside_build.macos_plat_name()
-            _bdist_wheel.finalize_options(self)
 
 # pyside_build_py and pyside_install_lib are reimplemented to preserve
 # symlinks when distutils / setuptools copy files to various
 # directories through the different build stages.
-class pyside_build_py(_build_py):
+class PysideBuildPy(_build_py):
 
     def __init__(self, *args, **kwargs):
         _build_py.__init__(self, *args, **kwargs)
@@ -427,7 +404,7 @@ class pyside_build_py(_build_py):
                 # Using our own copyfile makes sure to preserve symlinks.
                 copyfile(srcfile, target)
 
-class pyside_install_lib(_install_lib):
+class PysideInstallLib(_install_lib):
 
     def __init__(self, *args, **kwargs):
         _install_lib.__init__(self, *args, **kwargs)
@@ -448,7 +425,7 @@ class pyside_install_lib(_install_lib):
             return
         return outfiles
 
-class pyside_build(_build):
+class PysideBuild(_build):
 
     def __init__(self, *args, **kwargs):
         _build.__init__(self, *args, **kwargs)
@@ -456,7 +433,7 @@ class pyside_build(_build):
     def finalize_options(self):
         os_name_backup = os.name
         if sys.platform == 'darwin':
-            self.plat_name = pyside_build.macos_plat_name()
+            self.plat_name = PysideBuild.macos_plat_name()
             # This is a hack to circumvent the dubious check in
             # distutils.commands.build -> finalize_options, which only
             # allows setting the plat_name for windows NT.
@@ -489,7 +466,7 @@ class pyside_build(_build):
         self.build_tests = False
 
     def run(self):
-        prepareBuild()
+        prepare_build()
         platform_arch = platform.architecture()[0]
         log.info("Python architecture is {}".format(platform_arch))
 
@@ -567,17 +544,17 @@ class pyside_build(_build):
             else:
                 py_include_dir = os.path.join(py_prefix,
                     "include/python{}".format(py_version))
-        dbgPostfix = ""
+        dbg_postfix = ""
         if build_type == "Debug":
-            dbgPostfix = "_d"
+            dbg_postfix = "_d"
         if sys.platform == "win32":
             if OPTION_MAKESPEC == "mingw":
                 static_lib_name = "libpython{}{}.a".format(
-                    py_version.replace(".", ""), dbgPostfix)
+                    py_version.replace(".", ""), dbg_postfix)
                 py_library = os.path.join(py_libdir, static_lib_name)
             else:
                 python_lib_name = "python{}{}.lib".format(
-                    py_version.replace(".", ""), dbgPostfix)
+                    py_version.replace(".", ""), dbg_postfix)
                 py_library = os.path.join(py_libdir, python_lib_name)
         else:
             lib_exts = ['.so']
@@ -593,13 +570,13 @@ class pyside_build(_build):
             # static library as last gasp
             lib_exts.append('.a')
 
-            if sys.version_info[0] == 2 and dbgPostfix:
+            if sys.version_info[0] == 2 and dbg_postfix:
                 # For Python2 add a duplicate set of extensions
-                # combined with the dbgPostfix, so we test for both the
+                # combined with the dbg_postfix, so we test for both the
                 # debug version of the lib and the normal one.
                 # This allows a debug PySide2 to be built with a
                 # non-debug Python.
-                lib_exts = [dbgPostfix + e for e in lib_exts] + lib_exts
+                lib_exts = [dbg_postfix + e for e in lib_exts] + lib_exts
 
             python_library_found = False
             libs_tried = []
@@ -669,24 +646,24 @@ class pyside_build(_build):
         qt_version = get_qt_version()
 
         # Update the PATH environment variable
-        additionalPaths = [py_scripts_dir, qt_dir]
+        additional_paths = [py_scripts_dir, qt_dir]
 
         # Add Clang to path for Windows.
         # Revisit once Clang is bundled with Qt.
         if (sys.platform == "win32" and
                 LooseVersion(self.qtinfo.version) >= LooseVersion("5.7.0")):
-            clangDir = detectClang()
-            if clangDir[0]:
-                clangBinDir = os.path.join(clangDir[0], 'bin')
+            clang_dir = detect_clang()
+            if clang_dir[0]:
+                clangBinDir = os.path.join(clang_dir[0], 'bin')
                 if not clangBinDir in os.environ.get('PATH'):
                     log.info("Adding {} as detected by {} to PATH".format(
-                        clangBinDir, clangDir[1]))
-                    additionalPaths.append(clangBinDir)
+                        clangBinDir, clang_dir[1]))
+                    additional_paths.append(clangBinDir)
             else:
                 raise DistutilsSetupError("Failed to detect Clang when checking "
                                           "LLVM_INSTALL_DIR, CLANG_INSTALL_DIR, llvm-config")
 
-        update_env_path(additionalPaths)
+        update_env_path(additional_paths)
 
         build_name = "py{}-qt{}-{}-{}".format(py_version, qt_version,
             platform.architecture()[0], build_type.lower())
@@ -784,7 +761,7 @@ class pyside_build(_build):
             log.info("OpenSSL dll directory: {}".format(OPTION_OPENSSL))
         if sys.platform == 'darwin':
             pyside_macos_deployment_target = (
-                pyside_build.macos_pyside_min_deployment_target()
+                PysideBuild.macos_pyside_min_deployment_target()
                 )
             log.info("MACOSX_DEPLOYMENT_TARGET set to: {}".format(
                 pyside_macos_deployment_target))
@@ -803,7 +780,7 @@ class pyside_build(_build):
 
         if not OPTION_ONLYPACKAGE:
             # Build extensions
-            for ext in containedModules:
+            for ext in contained_modules:
                 self.build_extension(ext)
 
             if OPTION_BUILDTESTS:
@@ -854,7 +831,7 @@ class pyside_build(_build):
         Otherwise use the maximum of the above mentioned two values.
         """
         python_target = get_config_var('MACOSX_DEPLOYMENT_TARGET') or None
-        qt_target = pyside_build.macos_qt_min_deployment_target()
+        qt_target = PysideBuild.macos_qt_min_deployment_target()
         setup_target = OPTION_MACOS_DEPLOYMENT_TARGET
 
         qt_target_split = [int(x) for x in qt_target.split('.')]
@@ -889,7 +866,7 @@ class pyside_build(_build):
     @staticmethod
     @memoize
     def macos_plat_name():
-        deployment_target = pyside_build.macos_pyside_min_deployment_target()
+        deployment_target = PysideBuild.macos_pyside_min_deployment_target()
         # Example triple "macosx-10.12-x86_64".
         plat = get_platform().split("-")
         plat_name = "{}-{}-{}".format(plat[0], deployment_target, plat[2])
@@ -959,14 +936,14 @@ class pyside_build(_build):
         cmake_cmd.append("-DPYTHON_INCLUDE_DIR={}".format(self.py_include_dir))
         cmake_cmd.append("-DPYTHON_LIBRARY={}".format(self.py_library))
         if OPTION_MODULE_SUBSET:
-            moduleSubSet = ''
+            module_sub_set = ''
             for m in OPTION_MODULE_SUBSET.split(','):
                 if m.startswith('Qt'):
                     m = m[2:]
-                if moduleSubSet:
-                    moduleSubSet += ';'
-                moduleSubSet += m
-            cmake_cmd.append("-DMODULES={}".format(moduleSubSet))
+                if module_sub_set:
+                    module_sub_set += ';'
+                module_sub_set += m
+            cmake_cmd.append("-DMODULES={}".format(module_sub_set))
         if OPTION_SKIP_MODULES:
             skip_modules = ''
             for m in OPTION_SKIP_MODULES.split(','):
@@ -977,13 +954,23 @@ class pyside_build(_build):
                 skip_modules += m
             cmake_cmd.append("-DSKIP_MODULES={}".format(skip_modules))
         # Add source location for generating documentation
-        cmake_src_dir = OPTION_QT_SRC if OPTION_QT_SRC else qtSrcDir
+        cmake_src_dir = OPTION_QT_SRC if OPTION_QT_SRC else qt_src_dir
         cmake_cmd.append("-DQT_SRC_DIR={}".format(cmake_src_dir))
         log.info("Qt Source dir: {}".format(cmake_src_dir))
 
         if self.build_type.lower() == 'debug':
             cmake_cmd.append("-DPYTHON_DEBUG_LIBRARY={}".format(
                 self.py_library))
+
+        if OPTION_LIMITED_API == "yes":
+            cmake_cmd.append("-DFORCE_LIMITED_API=yes")
+        elif OPTION_LIMITED_API == "no":
+            cmake_cmd.append("-DFORCE_LIMITED_API=no")
+        elif not OPTION_LIMITED_API:
+            pass
+        else:
+            raise DistutilsSetupError("option limited-api must be 'yes' or 'no' "
+                                      "(default yes if applicable, i.e. python version >= 3.5)")
 
         if OPTION_VERBOSE_BUILD:
             cmake_cmd.append("-DCMAKE_VERBOSE_MAKEFILE:BOOL=ON")
@@ -1066,7 +1053,7 @@ class pyside_build(_build):
             # Doing so could break the detected clang include paths
             # for example.
             deployment_target = \
-                pyside_build.macos_pyside_min_deployment_target()
+                PysideBuild.macos_pyside_min_deployment_target()
             cmake_cmd.append("-DCMAKE_OSX_DEPLOYMENT_TARGET={}".format(
                 deployment_target))
             os.environ['MACOSX_DEPLOYMENT_TARGET'] = deployment_target
@@ -1148,7 +1135,7 @@ class pyside_build(_build):
             os.chdir(self.script_dir)
 
             if sys.platform == "win32":
-                vars['dbgPostfix'] = OPTION_DEBUG and "_d" or ""
+                vars['dbg_postfix'] = OPTION_DEBUG and "_d" or ""
                 return prepare_packages_win32(self, vars)
             else:
                 return prepare_packages_posix(self, vars)
@@ -1300,13 +1287,20 @@ except IOError:
 
 
 cmd_class_dict = {
-    'build': pyside_build,
-    'build_py': pyside_build_py,
-    'build_ext': pyside_build_ext,
-    'bdist_egg': pyside_bdist_egg,
-    'develop': pyside_develop,
-    'install': pyside_install,
-    'install_lib': pyside_install_lib
+    'build': PysideBuild,
+    'build_py': PysideBuildPy,
+    'build_ext': PysideBuildExt,
+    'bdist_egg': PysideBdistEgg,
+    'develop': PysideDevelop,
+    'install': PysideInstall,
+    'install_lib': PysideInstallLib
 }
 if wheel_module_exists:
-    cmd_class_dict['bdist_wheel'] = pyside_build_wheel
+    params = {}
+    params['qt_version'] = get_qt_version()
+    params['package_version'] = get_package_version()
+    if sys.platform == 'darwin':
+        params['macos_plat_name'] = PysideBuild.macos_plat_name()
+    pyside_bdist_wheel = get_bdist_wheel_override(params)
+    if pyside_bdist_wheel:
+        cmd_class_dict['bdist_wheel'] = pyside_bdist_wheel

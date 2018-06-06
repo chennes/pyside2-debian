@@ -308,7 +308,7 @@ if "PySide2.QtCore" in sys.modules:
         "QBuffer.writeData": ('str', 'int'),
 
     # class PySide2.QtCore.QByteArray:
-        "QByteArray.__init__": [(), ('PySide2.QtCore.QByteArray',), ('int', 'Union[str, int]')],
+        "QByteArray.__init__": [(), ('PySide2.QtCore.QByteArray',), ('int', 'Union[str, int]'), ('bytes',), ('bytearray',)],
         "QByteArray.__copy__": (),
         "QByteArray.__reduce__": (),
         "QByteArray.append": [('PySide2.QtCore.QByteArray',), ('Union[str, int]',), ('int', 'Union[str, int]')],
@@ -14556,7 +14556,7 @@ if "PySide2.QtMultimedia" in sys.modules:
         "QMediaResource.videoCodec": (),
 
     # class PySide2.QtMultimedia.QMediaTimeRange:
-        "QMediaTimeRange.__init__": [(), ('PySide2.QtMultimedia.QMediaTimeRange',), ('int', 'int')],
+        "QMediaTimeRange.__init__": [(), ('PySide2.QtMultimedia.QMediaTimeInterval',), ('PySide2.QtMultimedia.QMediaTimeRange',), ('int', 'int')],
         "QMediaTimeRange.__copy__": (),
         "QMediaTimeRange.addInterval": ('int', 'int'),
         "QMediaTimeRange.addTimeRange": ('PySide2.QtMultimedia.QMediaTimeRange',),

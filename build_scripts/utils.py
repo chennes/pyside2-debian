@@ -1117,3 +1117,51 @@ def run_instruction(instruction, error):
     if result != 0:
         print("ERROR : " + error)
         exit(result)
+
+def acceptCITestConfiguration(hostOS, hostOSVer, targetArch, compiler):
+    # Disable unsupported CI configs for now
+    # NOTE: String must match with QT CI's storagesturct thrift
+    # QT 5.11.0 is missing libclang from RHEL 6.6
+    if hostOSVer in ["WinRT_10", "RHEL_6_6"]:
+        print("Disabled " + hostOSVer + " from Coin configuration")
+        return False
+   # With 5.11 CI will create two sets of release binaries, one with msvc 2015 and one with msvc 2017
+    # we shouldn't release the 2015 version. BUT, 32 bit build is done only on msvc 2015...
+    if compiler in ["MSVC2015"] and targetArch in ["X86_64"]:
+        print("Disabled " + compiler + " to " + targetArch + " from Coin configuration")
+        return False
+    return True
+
+def runCIProvisioning():
+    # we need to make sure that we have 32 bit python
+    if os.environ.get('PYTHON3_32_PATH') is not None:
+        return
+    targetDir = os.path.join(os.environ.get('USERPROFILE'), "downloads")
+    python3_32Path = "C:\\Python36_32"
+    python2_32Path = "C:\\Python27_32"
+    provP3Script = ("http://code.qt.io/cgit/qt/qt5.git/plain/coin/provisioning/common/windows/"
+                    "python3.ps1?id=6c295ac7f00f3352a3242b21c90bf3ad1a9fc86a")
+    provP2Script = ("http://code.qt.io/cgit/qt/qt5.git/plain/coin/provisioning/common/windows/"
+                    "python.ps1?id=6c295ac7f00f3352a3242b21c90bf3ad1a9fc86a")
+    helperScript = ("http://code.qt.io/cgit/qt/qt5.git/plain/coin/provisioning/common/windows/"
+                    "helpers.ps1?id=6c295ac7f00f3352a3242b21c90bf3ad1a9fc86a")
+    ps = ["powershell.exe", "Invoke-WebRequest", "-UseBasicParsing", provP3Script, "-OutFile",
+        os.path.join(targetDir, "python3.ps1")]
+    run_instruction(ps, "Unable to download python provisioning script")
+    ps = ["powershell.exe", "Invoke-WebRequest", "-UseBasicParsing", provP2Script, "-OutFile",
+        os.path.join(targetDir, "python2.ps1")]
+    run_instruction(ps, "Unable to download python provisioning script")
+    ps = ["powershell.exe", "Invoke-WebRequest", "-UseBasicParsing", helperScript, "-OutFile",
+        os.path.join(targetDir, "helpers.ps1")]
+    run_instruction(ps, "Unable to download helpers provisioning script")
+    ps = ["powershell.exe", "-ExecutionPolicy", "RemoteSigned", "-NonInteractive", "-File",
+        os.path.join(targetDir, "python3.ps1"), "32", python3_32Path]
+    run_instruction(ps, "Unable to install python3 32 bit")
+    ps = ["powershell.exe", "-ExecutionPolicy", "RemoteSigned", "-NonInteractive", "-File",
+        os.path.join(targetDir, "python2.ps1"), "32", python2_32Path]
+    run_instruction(ps, "Unable to install python2 32 bit")
+    # The env was set by powershell, so we are missing the env variables
+    os.environ["PYTHON3_32_PATH"] = python3_32Path
+    os.environ["PYTHON2_32_PATH"] = python2_32Path
+    os.environ["PIP3_32_PATH"] = python3_32Path + "\\Scripts"
+    os.environ["PIP2_32_PATH"] = python2_32Path + "\\Scripts"

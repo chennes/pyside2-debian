@@ -43,6 +43,8 @@ from build_scripts.utils import get_qtci_virtualEnv
 from build_scripts.utils import run_instruction
 from build_scripts.utils import rmtree
 from build_scripts.utils import get_python_dict
+from build_scripts.utils import acceptCITestConfiguration
+from build_scripts.utils import runCIProvisioning
 import os
 
 # Values must match COIN thrift
@@ -98,9 +100,7 @@ def call_setup(python_ver):
     run_instruction(["virtualenv", "-p", _pExe,  _env], "Failed to create virtualenv")
     install_pip_dependencies(env_pip, ["six", "wheel"])
     cmd = [env_python, "setup.py"]
-    # With 5.11 CI will create two sets of release binaries, one with msvc 2015 and one with msvc 2017
-    # we shouldn't release the 2015 version.
-    if CI_RELEASE_CONF and CI_COMPILER not in ["MSVC2017"]:
+    if CI_RELEASE_CONF:
         cmd += ["bdist_wheel", "--standalone"]
     else:
         cmd += ["build"]
@@ -123,16 +123,17 @@ def call_setup(python_ver):
     run_instruction(cmd, "Failed to run setup.py")
 
 def run_build_instructions():
-    # Disable unsupported configs for now
-    if CI_HOST_OS_VER in ["WinRT_10"]:
-        print("Disabled " + CI_HOST_OS_VER + " from Coin configuration")
-        exit()
-    if CI_HOST_ARCH == "X86_64" and CI_TARGET_ARCH == "X86":
-        print("Disabled 32 bit build on 64 bit from Coin configuration, until toolchains provisioned")
+    if not acceptCITestConfiguration(CI_HOST_OS, CI_HOST_OS_VER, CI_TARGET_ARCH, CI_COMPILER):
         exit()
 
+    # Make sure we have 32 bit python on 64 bit host
+    # FIXME this is hack for 5.11.0
+    if CI_HOST_OS == "Windows" and CI_HOST_ARCH == "X86_64" and CI_TARGET_ARCH == "X86":
+        runCIProvisioning()
     # Uses default python, hopefully we have python2 installed on all hosts
-    call_setup("")
+    # Skip building using Python 2 on Windows, because of different MSVC C runtimes (VS2008 vs VS2015+)
+    if CI_HOST_OS != "Windows":
+        call_setup("")
 
     # In case of packaging build, we have to build also python3 wheel
     if CI_RELEASE_CONF and CI_HOST_OS_VER not in ["RHEL_6_6"]:

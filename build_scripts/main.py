@@ -499,6 +499,9 @@ class PysideBuild(_build):
                     log.info("nmake was found in {}".format(nmake_path))
                     make_name = "nmake"
                     make_generator = "NMake Makefiles"
+                    if OPTION_JOBS:
+                        msg = "Option --jobs can only be used with 'jom' on Windows."
+                        raise DistutilsSetupError(msg)
             elif OPTION_MAKESPEC == "mingw":
                 make_name = "mingw32-make"
                 make_generator = "MinGW Makefiles"
@@ -1157,7 +1160,8 @@ class PysideBuild(_build):
         return config
 
     def is_webengine_built(self, built_modules):
-        return 'WebEngineWidgets' in built_modules or 'WebEngineCore' in built_modules
+        return ('WebEngineWidgets' in built_modules or 'WebEngineCore' in built_modules
+                                                    or 'WebEngine' in built_modules)
 
     def prepare_standalone_clang(self, is_win = False):
         """

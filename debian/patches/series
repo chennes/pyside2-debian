@@ -1,0 +1,5 @@
+change-python-version.patch
+fix-spelling-errors.patch
+drop-git-requirement.patch
+update-patchelf.patch
+remove-privacy-breach-in-doc.patch

@@ -1,0 +1,122 @@
+Description: Don't build pyside2-tools
+ pyside2-tools is not in the same upstream repository and it's not
+ required for pyside. We should try to package it separately.
+Author: Sophie Brun <sophie@freexian.com>
+Last-Update: 2018-07-12
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/testing/command.py
++++ b/testing/command.py
+@@ -151,7 +151,7 @@ def test_project(project, args, blacklis
+ def main():
+     # create the top-level command parser
+     start_time = timer()
+-    all_projects = "shiboken2 pyside2 pyside2-tools".split()
++    all_projects = "shiboken2 pyside2".split()
+     tested_projects = "shiboken2 pyside2".split()
+     parser = argparse.ArgumentParser(
+         formatter_class=argparse.RawDescriptionHelpFormatter,
+--- a/build_scripts/main.py
++++ b/build_scripts/main.py
+@@ -86,11 +86,11 @@ def get_setuptools_extension_modules():
+     return extension_modules
+ 
+ # Buildable extensions.
+-contained_modules = ['shiboken2', 'pyside2', 'pyside2-tools']
++contained_modules = ['shiboken2', 'pyside2']
+ 
+ # Git submodules: ["submodule_name",
+ #   "location_relative_to_sources_folder"]
+-submodules = [["pyside2-tools"]]
++#submodules = [["pyside2-tools"]]
+ 
+ pyside_package_dir_name = "pyside_package"
+ 
+@@ -315,8 +315,7 @@ def prepare_build():
+                 print('ignored error: {}'.format(e))
+     # Prepare package folders
+     ppdn = pyside_package_dir_name
+-    absolute_paths = [os.path.join(ppdn, "PySide2"),
+-        os.path.join(ppdn, "pyside2uic")]
++    absolute_paths = [os.path.join(ppdn, "PySide2")]
+     for pkg in absolute_paths:
+         pkg_dir = os.path.join(setup_script_dir, pkg)
+         os.makedirs(pkg_dir)
+--- a/build_scripts/platforms/unix.py
++++ b/build_scripts/platforms/unix.py
+@@ -70,31 +70,11 @@ def prepare_packages_posix(self, vars):
+         "{site_packages_dir}/{shiboken_module_name}",
+         "{pyside_package_dir}/PySide2/{shiboken_module_name}",
+         vars=vars)
+-    # <install>/lib/site-packages/pyside2uic/* ->
+-    #   <setup>/pyside2uic
+-    copydir(
+-        "{site_packages_dir}/pyside2uic",
+-        "{pyside_package_dir}/pyside2uic",
+-        force=False, vars=vars)
+-    if sys.version_info[0] > 2:
+-        rmtree("{pyside_package_dir}/pyside2uic/port_v2".format(**vars))
+-    else:
+-        rmtree("{pyside_package_dir}/pyside2uic/port_v3".format(**vars))
+-    # <install>/bin/pyside2-uic -> PySide2/scripts/uic.py
+-    makefile(
+-        "{pyside_package_dir}/PySide2/scripts/__init__.py",
+-        vars=vars)
+-    copyfile(
+-        "{install_dir}/bin/pyside2-uic",
+-        "{pyside_package_dir}/PySide2/scripts/uic.py",
+-        force=False, vars=vars)
+     # <install>/bin/* -> PySide2/
+     executables.extend(copydir(
+         "{install_dir}/bin/",
+         "{pyside_package_dir}/PySide2",
+         filter=[
+-            "pyside2-lupdate",
+-            "pyside2-rcc",
+             "shiboken2",
+         ],
+         recursive=False, vars=vars))
+@@ -141,14 +121,14 @@ def prepare_packages_posix(self, vars):
+                 force=False, vars=vars)
+         # Re-generate examples Qt resource files for Python 3
+         # compatibility
+-        if sys.version_info[0] == 3:
+-            examples_path = "{pyside_package_dir}/PySide2/examples".format(
+-                **vars)
+-            pyside_rcc_path = "{install_dir}/bin/pyside2-rcc".format(
+-                **vars)
+-            pyside_rcc_options = '-py3'
+-            regenerate_qt_resources(examples_path, pyside_rcc_path,
+-                pyside_rcc_options)
++#        if sys.version_info[0] == 3:
++#            examples_path = "{pyside_package_dir}/PySide2/examples".format(
++#                **vars)
++#            pyside_rcc_path = "{install_dir}/bin/pyside2-rcc".format(
++#                **vars)
++#            pyside_rcc_options = '-py3'
++#            regenerate_qt_resources(examples_path, pyside_rcc_path,
++#                pyside_rcc_options)
+     # Copy Qt libs to package
+     if OPTION_STANDALONE:
+         vars['built_modules'] = config['built_modules']
+--- a/setup.py
++++ b/setup.py
+@@ -272,17 +272,10 @@ setup(
+     url = 'http://www.pyside.org',
+     download_url = 'https://download.qt-project.org/official_releases/pyside2/',
+     license = 'LGPL',
+-    packages = ['PySide2', 'pyside2uic',
+-                'pyside2uic.Compiler',
+-                'pyside2uic.port_v{}'.format(sys.version_info[0]) ],
++    packages = ['PySide2'],
+     package_dir = {'': pyside_package_dir_name},
+     include_package_data = True,
+     zip_safe = False,
+-    entry_points = {
+-        'console_scripts': [
+-            'pyside2-uic = PySide2.scripts.uic:main',
+-        ]
+-    },
+     cmdclass = cmd_class_dict,
+     # Add a bogus extension module (will never be built here since we
+     # are overriding the build command to do it using cmake) so things

@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# Replace build directory value by install directory value
+package="libshiboken2-dev"
+for directory in "cmake/Shiboken2-5.11.0" "pkgconfig"; do
+        sed -i "s|build.*relwithdebinfo/lib|usr/lib/$DEB_HOST_MULTIARCH|" \
+	    debian/$package/usr/lib/$DEB_HOST_MULTIARCH/$directory/*;
+        sed -i "s|build.*relwithdebinfo|usr|" \
+	    debian/$package/usr/lib/$DEB_HOST_MULTIARCH/$directory/*;
+done
+
+package="libpyside2-dev"
+for directory in "pkgconfig" "cmake/PySide2-5.11.0"; do
+        sed -i "s|build.*relwithdebinfo/lib|usr/lib/$DEB_HOST_MULTIARCH|" \
+	    debian/$package/usr/lib/$DEB_HOST_MULTIARCH/$directory/*;
+        sed -i "s|build.*relwithdebinfo|usr|" \
+	    debian/$package/usr/lib/$DEB_HOST_MULTIARCH/$directory/*;
+done
+
+# Set correctly the python path for pyside2 (Python2 for now)
+sed -i "s|^pythonpath=.*|pythonpath=/usr/lib/python2.7/dist-packages|" \
+    debian/libpyside2-dev/usr/lib/$DEB_HOST_MULTIARCH/pkgconfig/pyside2.pc
+
+sed -i "s|^SET(PYSIDE_PYTHONPATH.*|SET(PYSIDE_PYTHONPATH \"/usr/lib/python2.7/dist-packages\")|" \
+    debian/libpyside2-dev/usr/lib/$DEB_HOST_MULTIARCH/cmake/PySide2-5.11.0/PySide2Config-python2.7.$DEB_HOST_MULTIARCH.cmake

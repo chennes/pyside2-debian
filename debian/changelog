@@ -1,5 +1,5 @@
-pyside2 (5.11.0-1) UNRELEASED; urgency=medium
+pyside2 (5.11.0-1) unstable; urgency=medium
 
   * Initial release (Closes: #877871)
 
- -- Sophie Brun <sophie@freexian.com>  Wed, 18 Jul 2018 11:25:55 +0200
+ -- Sophie Brun <sophie@freexian.com>  Thu, 26 Jul 2018 17:47:45 +0200

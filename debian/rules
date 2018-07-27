@@ -36,7 +36,7 @@ override_dh_makeshlibs:
 	dh_makeshlibs -VUpstream-Version
 
 override_dh_install:
-	dh_install
+	dh_install -X.doctrees
 	#remove RUNPATH setup in shiboken2
 	chrpath -d debian/shiboken2/usr/bin/shiboken2
 	# drop specific Python2 or Python code in packages. Otherwise it

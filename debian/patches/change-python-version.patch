@@ -1,3 +1,6 @@
+Description: Enable Python 3.7 in setup.py
+Author: Sophie Brun <sophie@freexian.com>
+
 --- a/setup.py
 +++ b/setup.py
 @@ -259,6 +259,7 @@ setup(

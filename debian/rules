@@ -4,7 +4,7 @@ include /usr/share/dpkg/pkg-info.mk
 
 # Safety measure to ensure package names match SONAMEs
 PYSIDE_MAJOR := $(shell echo $(DEB_VERSION_UPSTREAM) | cut -d. -f1-2)
-ifeq ($(shell dh_listpackages | grep -- -$(PYSIDE_MAJOR)$$),)
+ifeq ($(shell dh_listpackages -a | grep -- -$(PYSIDE_MAJOR)$$),)
     $(error Please update package names for major version $(PYSIDE_MAJOR))
 endif
 

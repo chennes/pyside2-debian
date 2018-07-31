@@ -1,2 +1,0 @@
-# package python2 module as freeCAD is not ready yet for python3
-python-pyside2.qtcore: new-package-should-not-package-python2-module python-pyside2.qtcore

@@ -1,4 +1,4 @@
-pyside2 (5.11.0-2) UNRELEASED; urgency=medium
+pyside2 (5.11.0-2) unstable; urgency=medium
 
   [ Raphaël Hertzog ]
   * Fix build with dpkg-buildpackage -A. Closes: #904892
@@ -13,7 +13,7 @@ pyside2 (5.11.0-2) UNRELEASED; urgency=medium
   * Use python2 only in pyside2-tools.
   * Remove big metapackages python-pyside2 and python3-pyside2.
 
- -- Raphaël Hertzog <hertzog@debian.org>  Tue, 31 Jul 2018 16:34:26 +0200
+ -- Raphaël Hertzog <hertzog@debian.org>  Tue, 31 Jul 2018 16:37:40 +0200
 
 pyside2 (5.11.0-1) unstable; urgency=medium
 

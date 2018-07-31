@@ -1,4 +1,4 @@
-pyside2 (5.11.0-3) UNRELEASED; urgency=medium
+pyside2 (5.11.0-3) unstable; urgency=medium
 
   * More fixes for builds building only arch any or only arch all.
   * Really fix the build with dpkg-buildpackage -A.

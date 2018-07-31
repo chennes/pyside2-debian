@@ -38,14 +38,17 @@ override_dh_auto_install:
 override_dh_makeshlibs:
 	dh_makeshlibs -VUpstream-Version
 
-override_dh_install:
+override_dh_install-indep:
 	dh_install -X.doctrees
-	#remove RUNPATH setup in shiboken2
-	chrpath -d debian/shiboken2/usr/bin/shiboken2
 	# drop specific Python2 or Python code in packages. Otherwise it
 	# will fail during the packages installation
 	rm -r debian/python-pyside2uic/usr/lib/python2.7/dist-packages/pyside2uic/port_v3
 	rm -r debian/python3-pyside2uic/usr/lib/python3/dist-packages/pyside2uic/port_v2
+
+override_dh_install-arch:
+	dh_install
+	# remove RUNPATH setup in shiboken2
+	chrpath -d debian/shiboken2/usr/bin/shiboken2
 	# change the library path in pkg-info/*.pc and in *.cmake files:
 	# during the build the path is setup to the build dir
 	# /build/pyside2* (required to find lib during the build) but it's

@@ -296,7 +296,7 @@ Description: CPython bindings generator for C++ libraries (common documentation)
 
 Package: pyside2-tools
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, python3-pyside2uic, ${python3:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, python-pyside2uic, ${python:Depends}
 Description: development tools for PySide2 (uic, rcc, lupdate)
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.

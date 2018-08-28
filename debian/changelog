@@ -4,7 +4,7 @@ pyside2 (5.11.0-4) unstable; urgency=medium
   * Add Cmake config files for Python3 (Closes: #906020)
   * Fix debian/libpyside2-5.11.install for triplets that are not *-linux-gnu
     (thanks to Adrian Bunk)
-  * Add an upstream patch to fix build on armel armh
+  * Add an upstream patch to fix build on armel/armhf
 
  -- Sophie Brun <sophie@freexian.com>  Mon, 27 Aug 2018 12:53:29 +0200
 

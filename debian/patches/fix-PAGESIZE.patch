@@ -1,0 +1,22 @@
+Description: Fix hardcoded PAGESIZE
+Local compilation of imported patchelf.cc uses a hardcoded PAGESIZE define.
+This patches makes use of getconf to fetch PAGESIZE on the build machine though.
+Author: Frédéric Bonnard <frediz@debian.org>
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
+--- a/build_scripts/main.py
++++ b/build_scripts/main.py
+@@ -880,10 +880,12 @@
+             return
+         log.info("Building patchelf...")
+         module_src_dir = os.path.join(self.sources_dir, "patchelf")
++        import subprocess
++        pagesize = subprocess.check_output("getconf PAGESIZE", shell=True).decode('utf-8').rstrip()
+         build_cmd = [
+             "g++",
+             "-std=c++11",
+-            "-DPAGESIZE=4096",
++            "-DPAGESIZE=%s" % (pagesize),
+             '-DPACKAGE_STRING="patchelf"',
+             "-D_FILE_OFFSET_BITS=64",
+             "{}/patchelf.cc".format(module_src_dir),

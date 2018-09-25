@@ -4,3 +4,4 @@ drop-git-requirement.patch
 update-patchelf.patch
 remove-privacy-breach-in-doc.patch
 PySide2-QtGui-Fix-build-of-Debian-armel-armh-OpenGL.patch
+fix-PAGESIZE.patch

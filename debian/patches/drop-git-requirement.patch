@@ -6,7 +6,7 @@ Last-Update: 2018-07-06
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- a/build_scripts/main.py
 +++ b/build_scripts/main.py
-@@ -300,9 +300,9 @@ def get_qt_version():
+@@ -305,9 +305,9 @@ def get_qt_version():
      return qt_version
  
  def prepare_build():

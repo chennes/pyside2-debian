@@ -12,7 +12,8 @@ This patch brings patchelf in sync with the commit
 repository.
 
 Also update patchelf's build process to match the logic in upstream's
-automake files.
+automake files (thanks to Frédéric Bonnard for the patch to properly use
+getconf PAGESIZE).
 
 Bug: https://bugreports.qt.io/browse/PYSIDE-740
 Last-Update: 2018-07-09
@@ -3079,12 +3080,16 @@ Last-Update: 2018-07-09
  #endif	/* elf.h */
 --- a/build_scripts/main.py
 +++ b/build_scripts/main.py
-@@ -878,6 +878,10 @@ class PysideBuild(_build):
+@@ -894,8 +894,14 @@ class PysideBuild(_build):
+             return
+         log.info("Building patchelf...")
          module_src_dir = os.path.join(self.sources_dir, "patchelf")
++        import subprocess
++        pagesize = subprocess.check_output("getconf PAGESIZE", shell=True).decode('utf-8').rstrip()
          build_cmd = [
              "g++",
 +            "-std=c++11",
-+            "-DPAGESIZE=4096",
++            "-DPAGESIZE=%s" % (pagesize),
 +            '-DPACKAGE_STRING="patchelf"',
 +            "-D_FILE_OFFSET_BITS=64",
              "{}/patchelf.cc".format(module_src_dir),

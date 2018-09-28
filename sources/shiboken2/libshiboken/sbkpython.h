@@ -42,7 +42,13 @@
 
 #include "sbkversion.h"
 
+/*
+ * Python 2 has function _Py_Mangle directly in Python.h .
+ * This creates wrong language binding unless we define 'extern "C"' here.
+ */
+extern "C" {
 #include <Python.h>
+}
 #include <structmember.h>
 // Now we have the usual variables from Python.h .
 #include "python25compat.h"
@@ -70,6 +76,12 @@
     #define SBK_PyMethod_New PyMethod_New
     #define PyInt_AsSsize_t(x)  PyLong_AsSsize_t(x)
     #define PyString_Type PyUnicode_Type
+
+    // In Python 3, Py_TPFLAGS_DEFAULT contains Py_TPFLAGS_HAVE_VERSION_TAG,
+    // which will trigger the attribute cache, which is not intended in Qt for Python.
+    // Use a customized Py_TPFLAGS_DEFAULT by defining Py_TPFLAGS_HAVE_VERSION_TAG = 0.
+    #undef Py_TPFLAGS_HAVE_VERSION_TAG
+    #define Py_TPFLAGS_HAVE_VERSION_TAG  (0)
 
 #else
     // Note: if there wasn't for the old-style classes, only a PyNumber_Check would suffice.

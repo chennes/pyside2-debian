@@ -180,8 +180,8 @@ SbkObjectType *SbkObject_TypeF(void)
         type = reinterpret_cast<PyTypeObject *>(PyType_FromSpec(&SbkObject_Type_spec));
         Py_TYPE(type) = SbkObjectType_TypeF();
         Py_INCREF(Py_TYPE(type));
-        PepType(type)->tp_weaklistoffset = offsetof(SbkObject, weakreflist);
-        PepType(type)->tp_dictoffset = offsetof(SbkObject, ob_dict);
+        type->tp_weaklistoffset = offsetof(SbkObject, weakreflist);
+        type->tp_dictoffset = offsetof(SbkObject, ob_dict);
     }
     return reinterpret_cast<SbkObjectType *>(type);
 }
@@ -259,7 +259,9 @@ void SbkObjectTypeDealloc(PyObject* pyObj)
     PyTypeObject *type = reinterpret_cast<PyTypeObject*>(pyObj);
 
     PyObject_GC_UnTrack(pyObj);
+#ifndef Py_LIMITED_API
     Py_TRASHCAN_SAFE_BEGIN(pyObj);
+#endif
     if (sotp) {
         if (sotp->user_data && sotp->d_func) {
             sotp->d_func(sotp->user_data);
@@ -272,7 +274,9 @@ void SbkObjectTypeDealloc(PyObject* pyObj)
         delete sotp;
         sotp = nullptr;
     }
+#ifndef Py_LIMITED_API
     Py_TRASHCAN_SAFE_END(pyObj);
+#endif
 }
 
 PyObject* SbkObjectTypeTpNew(PyTypeObject* metatype, PyObject* args, PyObject* kwds)
@@ -302,18 +306,18 @@ PyObject* SbkObjectTypeTpNew(PyTypeObject* metatype, PyObject* args, PyObject* k
 #ifndef IS_PY3K
         if (PyClass_Check(baseType)) {
             PyErr_Format(PyExc_TypeError, "Invalid base class used in type %s. "
-                "PySide only support multiple inheritance from python new style class.", PepType(metatype)->tp_name);
+                "PySide only support multiple inheritance from python new style class.", metatype->tp_name);
             return 0;
         }
 #endif
-        if (PepType(reinterpret_cast<PyTypeObject*>(baseType))->tp_new == SbkDummyNew) {
+        if (reinterpret_cast<PyTypeObject *>(baseType)->tp_new == SbkDummyNew) {
             // PYSIDE-595: A base class does not allow inheritance.
             return SbkDummyNew(metatype, args, kwds);
         }
     }
 
     // The meta type creates a new type when the Python programmer extends a wrapped C++ class.
-    newfunc type_new = reinterpret_cast<newfunc>(PepType(&PyType_Type)->tp_new);
+    newfunc type_new = reinterpret_cast<newfunc>(PyType_Type.tp_new);
     SbkObjectType *newType = reinterpret_cast<SbkObjectType*>(type_new(metatype, args, kwds));
     if (!newType)
         return 0;
@@ -421,7 +425,7 @@ SbkDummyNew(PyTypeObject *type, PyObject*, PyObject*)
     // PYSIDE-595: Give the same error as type_call does when tp_new is NULL.
     PyErr_Format(PyExc_TypeError,
                  "cannot create '%.100s' instances ¯\\_(ツ)_/¯",
-                 PepType(type)->tp_name);
+                 type->tp_name);
     return nullptr;
 }
 
@@ -454,7 +458,7 @@ static void decRefPyObjectList(const std::list<PyObject*> &pyObj, PyObject* skip
 
 static void _walkThroughClassHierarchy(PyTypeObject* currentType, HierarchyVisitor* visitor)
 {
-    PyObject* bases = PepType(currentType)->tp_bases;
+    PyObject* bases = currentType->tp_bases;
     Py_ssize_t numBases = PyTuple_GET_SIZE(bases);
     for (int i = 0; i < numBases; ++i) {
         PyTypeObject* type = reinterpret_cast<PyTypeObject*>(PyTuple_GET_ITEM(bases, i));
@@ -573,10 +577,10 @@ void setErrorAboutWrongArguments(PyObject* args, const char* funcName, const cha
                 if (i)
                     params += ", ";
                 PyObject* arg = PyTuple_GET_ITEM(args, i);
-                params += PepType((Py_TYPE(arg)))->tp_name;
+                params += Py_TYPE(arg)->tp_name;
             }
         } else {
-            params = PepType((Py_TYPE(args)))->tp_name;
+            params = Py_TYPE(args)->tp_name;
         }
     }
 
@@ -665,7 +669,7 @@ bool canCallConstructor(PyTypeObject* myType, PyTypeObject* ctorType)
     FindBaseTypeVisitor visitor(ctorType);
     walkThroughClassHierarchy(myType, &visitor);
     if (!visitor.found()) {
-        PyErr_Format(PyExc_TypeError, "%s isn't a direct base class of %s", PepType(ctorType)->tp_name, PepType(myType)->tp_name);
+        PyErr_Format(PyExc_TypeError, "%s isn't a direct base class of %s", ctorType->tp_name, myType->tp_name);
         return false;
     }
     return true;
@@ -828,7 +832,14 @@ Py_hash_t hash(PyObject* pyObj)
 
 static void setSequenceOwnership(PyObject* pyObj, bool owner)
 {
-    if (PySequence_Check(pyObj)) {
+
+    bool has_length = true;
+    if (PySequence_Size(pyObj) < 0) {
+        PyErr_Clear();
+        has_length = false;
+    }
+
+    if (PySequence_Check(pyObj) && has_length) {
         Py_ssize_t size = PySequence_Size(pyObj);
         if (size > 0) {
             std::list<SbkObject*> objs = splitPyObject(pyObj);
@@ -1094,13 +1105,13 @@ bool isValid(PyObject* pyObj)
 
     if (!priv->cppObjectCreated && isUserType(pyObj)) {
         PyErr_Format(PyExc_RuntimeError, "'__init__' method of object's base class (%s) not called.",
-                     PepType((Py_TYPE(pyObj)))->tp_name);
+                     Py_TYPE(pyObj)->tp_name);
         return false;
     }
 
     if (!priv->validCppObject) {
         PyErr_Format(PyExc_RuntimeError, "Internal C++ object (%s) already deleted.",
-                     PepType((Py_TYPE(pyObj)))->tp_name);
+                     Py_TYPE(pyObj)->tp_name);
         return false;
     }
 
@@ -1116,14 +1127,14 @@ bool isValid(SbkObject* pyObj, bool throwPyError)
     if (!priv->cppObjectCreated && isUserType(reinterpret_cast<PyObject*>(pyObj))) {
         if (throwPyError)
             PyErr_Format(PyExc_RuntimeError, "Base constructor of the object (%s) not called.",
-                         PepType((Py_TYPE(pyObj)))->tp_name);
+                         Py_TYPE(pyObj)->tp_name);
         return false;
     }
 
     if (!priv->validCppObject) {
         if (throwPyError)
             PyErr_Format(PyExc_RuntimeError, "Internal C++ object (%s) already deleted.",
-                         PepType((Py_TYPE(pyObj)))->tp_name);
+                         (Py_TYPE(pyObj))->tp_name);
         return false;
     }
 
@@ -1291,7 +1302,7 @@ void removeParent(SbkObject* child, bool giveOwnershipBack, bool keepReference)
 
     ChildrenList& oldBrothers = pInfo->parent->d->parentInfo->children;
     // Verify if this child is part of parent list
-    ChildrenList::iterator iChild = std::find(oldBrothers.begin(), oldBrothers.end(), child);
+    auto iChild = oldBrothers.find(child);
     if (iChild == oldBrothers.end())
         return;
 
@@ -1404,7 +1415,7 @@ void deallocData(SbkObject* self, bool cleanup)
 
     // PYSIDE-571: qApp is no longer allocated.
     if (PyObject_IS_GC(reinterpret_cast<PyObject*>(self)))
-        PepType(Py_TYPE(self))->tp_free(self);
+        Py_TYPE(self)->tp_free(self);
 }
 
 void setTypeUserData(SbkObject* wrapper, void* userData, DeleteUserDataFunc d_func)
@@ -1501,7 +1512,7 @@ std::string info(SbkObject* self)
         s << "C++ address....... ";
         std::list<SbkObjectType*>::const_iterator it = bases.begin();
         for (int i = 0; it != bases.end(); ++it, ++i)
-            s << PepType((reinterpret_cast<PyTypeObject*>(*it)))->tp_name << '/' << self->d->cptr[i] << ' ';
+            s << reinterpret_cast<PyTypeObject *>(*it)->tp_name << '/' << self->d->cptr[i] << ' ';
         s << "\n";
     }
     else {
@@ -1520,7 +1531,7 @@ std::string info(SbkObject* self)
         s << String::toCString(parent) << "\n";
     }
 
-    if (self->d->parentInfo && self->d->parentInfo->children.size()) {
+    if (self->d->parentInfo && !self->d->parentInfo->children.empty()) {
         s << "children.......... ";
         ChildrenList& children = self->d->parentInfo->children;
         for (ChildrenList::const_iterator it = children.begin(); it != children.end(); ++it) {
@@ -1530,7 +1541,7 @@ std::string info(SbkObject* self)
         s << '\n';
     }
 
-    if (self->d->referredObjects && self->d->referredObjects->size()) {
+    if (self->d->referredObjects && !self->d->referredObjects->empty()) {
         Shiboken::RefCountMap& map = *self->d->referredObjects;
         s << "referred objects.. ";
         Shiboken::RefCountMap::const_iterator it = map.begin();

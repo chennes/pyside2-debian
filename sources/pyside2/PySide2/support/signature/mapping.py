@@ -40,7 +40,7 @@
 from __future__ import print_function, absolute_import
 
 """
-signature_mapping.py
+mapping.py
 
 This module has the mapping from the pyside C-modules view of signatures
 to the Python representation.
@@ -55,8 +55,11 @@ See _resolve_value() in singature.py
 import sys
 import struct
 import PySide2
+try:
+    from . import typing
+except ImportError:
+    import typing
 
-from . import typing
 ellipsis = "..."
 Char = typing.Union[str, int]     # how do I model the limitation to 1 char?
 StringList = typing.List[str]

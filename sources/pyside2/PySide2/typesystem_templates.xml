@@ -50,6 +50,25 @@
         Shiboken::Object::setParent(%PYSELF, $PYARG);
     </template>
 
+    <template name="tuple_ok_retval">
+    %PYARG_0 = PyTuple_New(2);
+    PyTuple_SET_ITEM(%PYARG_0, 0, %CONVERTTOPYTHON[bool](ok_));
+    PyTuple_SET_ITEM(%PYARG_0, 1, %CONVERTTOPYTHON[%RETURN_TYPE](retval_));
+    </template>
+    <template name="bool*_fix,arg">
+        bool ok_;
+        %BEGIN_ALLOW_THREADS
+        %RETURN_TYPE retval_ = %CPPSELF.%FUNCTION_NAME(&amp;ok_, %2);
+        %END_ALLOW_THREADS
+        <insert-template name="tuple_ok_retval"/>
+    </template>
+    <template name="bool*_fix,arg,arg,arg,arg">
+        bool ok_;
+        %BEGIN_ALLOW_THREADS
+        %RETURN_TYPE retval_ = %CPPSELF.%FUNCTION_NAME(&amp;ok_, %2, %3, %4, %5);
+        %END_ALLOW_THREADS
+        <insert-template name="tuple_ok_retval"/>
+    </template>
     <!-- Templates to fix bool* parameters -->
     <template name="tuple_retval_ok">
     %PYARG_0 = PyTuple_New(2);
@@ -315,11 +334,11 @@
     <!-- templates for __repr__ -->
     <template name="repr_code">
         QString format = QString().sprintf("%s(%REPR_FORMAT)",
-            PepType(Py_TYPE(%PYSELF))->tp_name, %REPR_ARGS);
+            Py_TYPE(%PYSELF)->tp_name, %REPR_ARGS);
         %PYARG_0 = Shiboken::String::fromCString(qPrintable(format));
     </template>
     <template name="repr_code_matrix">
-        QString format= QString("%1((").arg(PepType(Py_TYPE(%PYSELF))->tp_name);
+        QString format= QString("%1((").arg(Py_TYPE(%PYSELF)->tp_name);
 
         QList&lt; %MATRIX_TYPE &gt; cppArgs;
         %MATRIX_TYPE data[%MATRIX_SIZE];

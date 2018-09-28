@@ -269,7 +269,7 @@
     <enum-type name="PanelModality" since="4.6"/>
     <inject-code class="target" position="end">
         PyObject *userTypeConstant =  PyInt_FromLong(QGraphicsItem::UserType);
-        PyDict_SetItemString(PepType(Sbk_QGraphicsItem_TypeF())->tp_dict, "UserType", userTypeConstant);
+        PyDict_SetItemString(reinterpret_cast&lt;PyTypeObject *&gt;(Sbk_QGraphicsItem_TypeF())->tp_dict, "UserType", userTypeConstant);
     </inject-code>
     <modify-function signature="setParentItem(QGraphicsItem*)">
       <modify-argument index="this">
@@ -404,6 +404,11 @@
     </modify-function>
     <modify-function signature="wheelEvent(QGraphicsSceneWheelEvent*)">
       <modify-argument index="1" invalidate-after-use="yes"/>
+    </modify-function>
+    <modify-function signature="setGraphicsEffect(QGraphicsEffect*)">
+      <modify-argument index="1">
+        <parent index="this" action="add"/>
+      </modify-argument>
     </modify-function>
     <!-- ### These methods are internal on Qt. -->
     <modify-function signature="supportsExtension(QGraphicsItem::Extension)const" remove="all"/>
@@ -600,7 +605,7 @@
             <replace-type modified-type="PyTuple" />
         </modify-argument>
         <inject-code class="target" position="beginning">
-            <insert-template name="fix_bool*,arg"/>
+            <insert-template name="bool*_fix,arg"/>
         </inject-code>
     </modify-function>
     <modify-function signature="getFont(bool*,QFont,QWidget*,QString,QFlags&lt;QFontDialog::FontDialogOption&gt;)">
@@ -611,7 +616,7 @@
             <replace-type modified-type="PyTuple" />
         </modify-argument>
         <inject-code class="target" position="beginning">
-            <insert-template name="fix_bool*,arg,arg,arg,arg"/>
+            <insert-template name="bool*_fix,arg,arg,arg,arg"/>
         </inject-code>
     </modify-function>
   </object-type>

@@ -189,7 +189,7 @@ PyObject* pointerToPython(const SbkConverter *converter, const void *cppIn)
         Py_RETURN_NONE;
     if (!converter->pointerToPython) {
         warning(PyExc_RuntimeWarning, 0, "pointerToPython(): SbkConverter::pointerToPython is null for \"%s\".",
-                PepType(converter->pythonType)->tp_name);
+                converter->pythonType->tp_name);
         Py_RETURN_NONE;
     }
     return converter->pointerToPython(cppIn);
@@ -211,7 +211,7 @@ PyObject* referenceToPython(const SbkConverter *converter, const void *cppIn)
     }
     if (!converter->pointerToPython) {
         warning(PyExc_RuntimeWarning, 0, "referenceToPython(): SbkConverter::pointerToPython is null for \"%s\".",
-                PepType(converter->pythonType)->tp_name);
+                converter->pythonType->tp_name);
         Py_RETURN_NONE;
     }
     return converter->pointerToPython(cppIn);
@@ -223,7 +223,7 @@ static inline PyObject* CopyCppToPython(const SbkConverter *converter, const voi
         Py_RETURN_NONE;
     if (!converter->copyToPython) {
         warning(PyExc_RuntimeWarning, 0, "CopyCppToPython(): SbkConverter::copyToPython is null for \"%s\".",
-                PepType(converter->pythonType)->tp_name);
+                converter->pythonType->tp_name);
         Py_RETURN_NONE;
     }
     return converter->copyToPython(cppIn);
@@ -391,8 +391,11 @@ bool checkSequenceTypes(PyTypeObject* type, PyObject* pyIn)
 {
     assert(type);
     assert(pyIn);
-    if (!PySequence_Check(pyIn))
+    if (PySequence_Size(pyIn) < 0) {
+        // clear the error if < 0 which means no length at all
+        PyErr_Clear();
         return false;
+    }
     const Py_ssize_t size = PySequence_Size(pyIn);
     for (Py_ssize_t i = 0; i < size; ++i) {
         if (!PyObject_TypeCheck(AutoDecRef(PySequence_GetItem(pyIn, i)), type))

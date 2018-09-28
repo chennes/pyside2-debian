@@ -53,7 +53,7 @@ extern "C"
 
 // Extracted into bufferprocs27.h
 #ifdef Py_LIMITED_API
-#include "bufferprocs27.h"
+#include "bufferprocs_py37.h"
 #endif
 
 /*****************************************************************************
@@ -69,13 +69,8 @@ LIBSHIBOKEN_API void _PyObject_Dump(PyObject *);
 /*
  * There are a few structures that are needed, but cannot be used without
  * breaking the API. We use some heuristics to get those fields anyway
- * and validate that we really found them, see Pepresolve.cpp .
+ * and validate that we really found them, see pep384impl.cpp .
  */
-
-// PepType is just a typecast that allows direct access. This is
-// often better to read than the reversal via the former macro
-// functions PepType_tp_xxx.
-#define PepType(o)                          (reinterpret_cast<PepTypeObject*>(o))
 
 #ifdef Py_LIMITED_API
 
@@ -87,7 +82,7 @@ LIBSHIBOKEN_API void _PyObject_Dump(PyObject *);
  * When we need more fields, we replace it back and add it to the
  * validation.
  */
-typedef struct _peptypeobject {
+typedef struct _typeobject {
     PyVarObject ob_base;
     const char *tp_name;
     Py_ssize_t tp_basicsize;
@@ -131,22 +126,16 @@ typedef struct _peptypeobject {
     PyObject *tp_bases;
     PyObject *tp_mro; /* method resolution order */
 
-} PepTypeObject;
+} PyTypeObject;
 
-LIBSHIBOKEN_API unaryfunc PepType_nb_index(PyTypeObject *type);
-
+// This was a macro error in the limited API from the beginning.
+// It was fixed in Python master, but did make it only in Python 3.8 .
+#define PY_ISSUE33738_SOLVED 0x03080000
+#if PY_VERSION_HEX < PY_ISSUE33738_SOLVED
 #undef PyIndex_Check
-
 LIBSHIBOKEN_API int PyIndex_Check(PyObject *obj);
+#endif
 
-#undef PyObject_IS_GC
-#define PyObject_IS_GC(o) (PyType_IS_GC(Py_TYPE(o)) && \
-    ( PepType(Py_TYPE(o))->tp_is_gc == NULL || \
-      PepType(Py_TYPE(o))->tp_is_gc(o) ))
-
-#else
-#define PepTypeObject                   PyTypeObject
-#define PepType_nb_index(o)             (PepType(o)->nb_index)
 #endif // Py_LIMITED_API
 
 struct SbkObjectTypePrivate;
@@ -154,22 +143,22 @@ struct PySideQFlagsTypePrivate;
 struct _SbkGenericTypePrivate;
 
 #define PepHeapType_SIZE \
-    (reinterpret_cast<PepTypeObject*>(&PyType_Type)->tp_basicsize)
+    (reinterpret_cast<PyTypeObject *>(&PyType_Type)->tp_basicsize)
 
 #define _genericTypeExtender(etype) \
-    (reinterpret_cast<char*>(etype) + PepHeapType_SIZE)
+    (reinterpret_cast<char *>(etype) + PepHeapType_SIZE)
 
 #define PepType_SOTP(etype) \
-    (*reinterpret_cast<SbkObjectTypePrivate**>(_genericTypeExtender(etype)))
+    (*reinterpret_cast<SbkObjectTypePrivate **>(_genericTypeExtender(etype)))
 
 #define PepType_SETP(etype) \
-    (reinterpret_cast<SbkEnumTypePrivate*>(_genericTypeExtender(etype)))
+    (reinterpret_cast<SbkEnumTypePrivate *>(_genericTypeExtender(etype)))
 
 #define PepType_PFTP(etype) \
-    (reinterpret_cast<PySideQFlagsTypePrivate*>(_genericTypeExtender(etype)))
+    (reinterpret_cast<PySideQFlagsTypePrivate *>(_genericTypeExtender(etype)))
 
 #define PepType_SGTP(etype) \
-    (reinterpret_cast<_SbkGenericTypePrivate*>(_genericTypeExtender(etype)))
+    (reinterpret_cast<_SbkGenericTypePrivate *>(_genericTypeExtender(etype)))
 
 // functions used everywhere
 LIBSHIBOKEN_API const char *PepType_GetNameStr(PyTypeObject *type);
@@ -243,8 +232,8 @@ LIBSHIBOKEN_API char *_PepUnicode_AsString(PyObject *);
  */
 #ifdef Py_LIMITED_API
 #define PyTuple_GET_ITEM(op, i)     PyTuple_GetItem((PyObject *)op, i)
-#define PyTuple_GET_SIZE(op)        PyTuple_Size((PyObject *)op)
 #define PyTuple_SET_ITEM(op, i, v)  PyTuple_SetItem(op, i, v)
+#define PyTuple_GET_SIZE(op)        PyTuple_Size((PyObject *)op)
 #endif
 
 /*****************************************************************************
@@ -278,92 +267,6 @@ typedef struct _pycfunc PyCFunctionObject;
 
 /*****************************************************************************
  *
- * RESOLVED: descrobject.h
- *
- */
-#ifdef Py_LIMITED_API
-typedef struct _methoddescr PyMethodDescrObject;
-#endif
-
-/*****************************************************************************
- *
- * RESOLVED: pystate.h
- *
- */
-
-/*
- * pystate provides the data structure that is needed for the trashcan
- * algorithm. Unfortunately, it is not included in the limited API.
- * We have two options:
- *
- *  (1) ignore trashcan and live without secured deeply nested structures,
- *  (2) maintain the structure ourselves and make sure it does not change.
- *
- * I have chosen the second option.
- *
- * When a new python version appears, you need to check compatibility of
- * the PyThreadState structure (pystate.h) and the trashcan macros at the
- * end of object.h .
- */
-
-#ifdef Py_LIMITED_API
-
-#define Py_TRASH_MIN_COMPATIBLE 0x03020400
-#define Py_TRASH_MAX_COMPATIBLE 0x030700A0
-
-#if PY_VERSION_HEX >= Py_TRASH_MIN_COMPATIBLE && \
-    PY_VERSION_HEX <= Py_TRASH_MAX_COMPATIBLE
-typedef int (*Py_tracefunc)(PyObject *, struct _frame *, int, PyObject *);
-
-// This structure has the trashcan variables since Python 3.2.4.
-// We renamed all but the trashcan fields to make sure that we don't use
-// anything else somewhere.
-
-typedef struct _ts {
-    struct _ts *Pep_prev;
-    struct _ts *Pep_next;
-    PyInterpreterState *Pep_interp;
-
-    struct _frame *Pep_frame;
-    int Pep_recursion_depth;
-    char Pep_overflowed;
-    char Pep_recursion_critical;
-
-    int Pep_tracing;
-    int Pep_use_tracing;
-
-    Py_tracefunc Pep_c_profilefunc;
-    Py_tracefunc Pep_c_tracefunc;
-    PyObject *Pep_c_profileobj;
-    PyObject *Pep_c_traceobj;
-
-    PyObject *Pep_curexc_type;
-    PyObject *Pep_curexc_value;
-    PyObject *Pep_curexc_traceback;
-
-    PyObject *Pep_exc_type;
-    PyObject *Pep_exc_value;
-    PyObject *Pep_exc_traceback;
-
-    PyObject *Pep_dict;
-
-    int Pep_gilstate_counter;
-
-    PyObject *Pep_async_exc;
-    long Pep_thread_id;
-    // These two variables only are of interest to us.
-    int trash_delete_nesting;
-    PyObject *trash_delete_later;
-    // Here we cut away the rest of the reduced structure.
-} PyThreadState;
-#else
-#error *** Please check compatibility of the trashcan code, see Pep.h ***
-#endif
-
-#endif // Py_LIMITED_API
-
-/*****************************************************************************
- *
  * RESOLVED: pythonrun.h
  *
  */
@@ -383,7 +286,7 @@ LIBSHIBOKEN_API PyObject *PyRun_String(const char *, int, PyObject *, PyObject *
 // But this is no problem as we check it's validity for every version.
 
 #define PYTHON_BUFFER_VERSION_COMPATIBLE    (PY_VERSION_HEX >= 0x03030000 && \
-                                             PY_VERSION_HEX <  0X0306FFFF)
+                                             PY_VERSION_HEX <  0X0307FFFF)
 #if !PYTHON_BUFFER_VERSION_COMPATIBLE
 # error Please check the buffer compatibility for this python version!
 #endif
@@ -463,7 +366,8 @@ LIBSHIBOKEN_API PyObject *PyMethod_Self(PyObject *);
  */
 #ifdef Py_LIMITED_API
 /* Bytecode object */
-    // we have to grab the code object from python
+
+// we have to grab the code object from python
 typedef struct _code PyCodeObject;
 
 LIBSHIBOKEN_API int PepCode_Get(PyCodeObject *co, const char *name);
@@ -545,6 +449,15 @@ LIBSHIBOKEN_API PyObject *PyTime_FromTime(
     int hour, int minute, int second, int usecond);
 
 #endif /* Py_LIMITED_API */
+
+/*****************************************************************************
+ *
+ * Extra support for name mangling
+ *
+ */
+
+// PYSIDE-772: This function supports the fix, but is not meant as public.
+LIBSHIBOKEN_API PyObject *_Pep_PrivateMangle(PyObject *self, PyObject *name);
 
 /*****************************************************************************
  *

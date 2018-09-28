@@ -43,6 +43,7 @@
 <typesystem package="PySide2.Qt3DRender">
     <load-typesystem name="Qt3DCore/typesystem_3dcore.xml" generate="no"/>
     <namespace-type name="Qt3DRender">
+        <object-type name="AssimpImporter"/>
         <object-type name="PropertyReaderInterface"/>
         <object-type name="QAbstractFunctor"/>
         <object-type name="QAbstractLight">
@@ -78,7 +79,9 @@
         <object-type name="QBlendEquationArguments">
             <enum-type name="Blending"/>
         </object-type>
-        <object-type name="QBlitFramebuffer" since="5.10"/>
+        <object-type name="QBlitFramebuffer" since="5.10">
+            <enum-type name="InterpolationMethod"/>
+        </object-type>
         <object-type name="QBuffer">
             <enum-type name="AccessType"/>
             <enum-type name="BufferType"/>
@@ -96,7 +99,7 @@
         </object-type>
         <object-type name="QCameraSelector"/>
         <object-type name="QClearBuffers">
-            <enum-type name="BufferType"/>
+            <enum-type name="BufferType" flags="BufferTypeFlags"/>
         </object-type>
         <object-type name="QClipPlane"/>
         <object-type name="QColorMask"/>
@@ -130,8 +133,12 @@
             <enum-type name="Api"/>
             <enum-type name="OpenGLProfile"/>
         </object-type>
+        <object-type name="GLTFImporter"/>
+        <object-type name="GLTFExporter"/>
         <object-type name="QLayer"/>
-        <object-type name="QLayerFilter"/>
+        <object-type name="QLayerFilter">
+            <enum-type name="FilterMode"/>
+        </object-type>
         <object-type name="QLevelOfDetail">
             <enum-type name="ThresholdType"/>
         </object-type>
@@ -140,9 +147,11 @@
         <object-type name="QLineWidth" since="5.10"/>
         <object-type name="QMaterial"/>
         <object-type name="QMemoryBarrier">
-            <enum-type name="Operation"/>
+            <enum-type name="Operation" flags="Operations"/>
         </object-type>
-        <object-type name="QMesh"/>
+        <object-type name="QMesh">
+            <enum-type name="Status"/>
+        </object-type>
         <object-type name="QMultiSampleAntiAliasing"/>
         <object-type name="QNoDepthMask"/>
         <object-type name="QNoDraw"/>
@@ -205,9 +214,7 @@
         <object-type name="QSortPolicy">
             <enum-type name="SortType"/>
         </object-type>
-        <object-type name="QSpotLight">
-            <modify-function signature="attenuation() const" remove="all"/>
-        </object-type>
+        <object-type name="QSpotLight"/>
         <object-type name="QStencilMask"/>
         <object-type name="QStencilOperation"/>
         <object-type name="QStencilOperationArguments">

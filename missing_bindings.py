@@ -216,7 +216,7 @@ qt_documentation_website_prefixes['5.6'] = 'http://doc.qt.io/qt-5.6/'
 qt_documentation_website_prefixes['5.8'] = 'http://doc.qt.io/qt-5.8/'
 qt_documentation_website_prefixes['5.9'] = 'http://doc.qt.io/qt-5.9/'
 qt_documentation_website_prefixes['5.10'] = 'http://doc.qt.io/qt-5.10/'
-qt_documentation_website_prefixes['5.11'] = 'http://doc-snapshots.qt.io/qt5-5.11/'
+qt_documentation_website_prefixes['5.11'] = 'http://doc.qt.io/qt-5/'
 qt_documentation_website_prefixes['dev'] = 'http://doc-snapshots.qt.io/qt5-dev/'
 
 
@@ -305,8 +305,8 @@ def log(*pargs, **kw):
 
 log('PySide2 bindings for Qt {}'.format(args.version), style='heading1')
 
-log("""Using Qt version {} documentation to find public API Qt types and test "
-    "if the types are present in the PySide2 package.""".format(args.version))
+log("""Using Qt version {} documentation to find public API Qt types and test
+if the types are present in the PySide2 package.""".format(args.version))
 
 log("""Results are usually stored at
 https://wiki.qt.io/PySide2_Missing_Bindings
@@ -376,7 +376,14 @@ for module_name in modules_to_test.keys():
     missing_types = []
     for qt_type in types_on_html_page:
         try:
-            pyside_qualified_type = 'pyside_tested_module.' + qt_type
+            pyside_qualified_type = 'pyside_tested_module.'
+
+            if "Charts" in module_name:
+                pyside_qualified_type += 'QtCharts.'
+            elif "DataVisualization" in module_name:
+                pyside_qualified_type += 'QtDataVisualization.'
+
+            pyside_qualified_type += qt_type
             o = eval(pyside_qualified_type)
         except:
             missing_type = qt_type
@@ -385,7 +392,14 @@ for module_name in modules_to_test.keys():
 
             is_present_in_pyqt = False
             try:
-                pyqt_qualified_type = 'pyqt_tested_module.' + qt_type
+                pyqt_qualified_type = 'pyqt_tested_module.'
+
+                if "Charts" in module_name:
+                    pyqt_qualified_type += 'QtCharts.'
+                elif "DataVisualization" in module_name:
+                    pyqt_qualified_type += 'QtDataVisualization.'
+
+                pyqt_qualified_type += qt_type
                 eval(pyqt_qualified_type)
                 missing_type += " (is present in PyQt5)"
                 missing_types_compared_to_pyqt += 1

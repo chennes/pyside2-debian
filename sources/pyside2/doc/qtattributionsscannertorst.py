@@ -55,10 +55,6 @@ rstHeader="""Licenses Used in Qt for Python
 Qt for Python contains some code that is not provided under the
 GNU Lesser General Public License (LGPL) or the Qt Commercial License,
 but rather under specific licenses from the original authors.
-
-Qt for Python contains some code that is not provided under the
-GNU Lesser General Public License (LGPL) or the Qt Commercial License,
-but rather under specific licenses from the original authors.
 The Qt Company gratefully acknowledges these and other contributions
 to Qt for Python. We recommend that programs that use Qt for Python
 also acknowledge these contributions, and quote these license
@@ -71,8 +67,11 @@ Click the name of the component to see the licensing details.
 Third-party Licenses
 ^^^^^^^^^^^^^^^^^^^^
 
-The following table lists parts of Qt for Python that incorporate code
-licensed under third-party open-source licenses:
+The licenses for the third-party sources used by Qt itself are listed
+in
+`Qt documentation <http://doc.qt.io/qt-5/licenses-used-in-qt.html>`_.
+The following table lists parts of Qt for Python that incorporates
+code licensed under third-party opensource licenses:
 
 """
 

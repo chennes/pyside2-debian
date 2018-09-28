@@ -51,6 +51,11 @@ setup_py_path = os.path.join(setup_script_dir, "setup.py")
 
 @memoize
 def get_package_timestamp():
+    """ In a Coin CI build the returned timestamp will be the
+        Coin integration id timestamp. For regular builds it's
+        just the current timestamp or a user provided one."""
+    if OPTION_PACKAGE_TIMESTAMP:
+        return OPTION_PACKAGE_TIMESTAMP
     return int(time.time())
 
 @memoize
@@ -461,6 +466,7 @@ class PysideBuild(_build):
         self.py_include_dir = None
         self.py_library = None
         self.py_version = None
+        self.py_arch = None
         self.build_type = "Release"
         self.qtinfo = None
         self.build_tests = False
@@ -469,6 +475,7 @@ class PysideBuild(_build):
         prepare_build()
         platform_arch = platform.architecture()[0]
         log.info("Python architecture is {}".format(platform_arch))
+        self.py_arch = platform_arch[:-3]
 
         build_type = "Debug" if OPTION_DEBUG else "Release"
         if OPTION_RELWITHDEBINFO:
@@ -878,6 +885,13 @@ class PysideBuild(_build):
     def build_patchelf(self):
         if not sys.platform.startswith('linux'):
             return
+        self._patchelf_path = find_executable('patchelf')
+        if self._patchelf_path:
+            if not os.path.isabs(self._patchelf_path):
+                self._patchelf_path = os.path.join(os.getcwd(),
+                                                   self._patchelf_path)
+            log.info("Using {} ...".format(self._patchelf_path))
+            return
         log.info("Building patchelf...")
         module_src_dir = os.path.join(self.sources_dir, "patchelf")
         build_cmd = [
@@ -888,6 +902,7 @@ class PysideBuild(_build):
         ]
         if run_process(build_cmd) != 0:
             raise DistutilsSetupError("Error building patchelf")
+        self._patchelf_path = os.path.join(self.script_dir, "patchelf")
 
     def build_extension(self, extension):
         # calculate the subrepos folder name
@@ -1014,7 +1029,7 @@ class PysideBuild(_build):
             cmake_cmd.append("-DPYSIDE_SETUP_PY_PACKAGE_TIMESTAMP={}".format(
                 timestamp))
 
-        if extension.lower() == "shiboken2":
+        if extension.lower() in ["shiboken2", "pyside2-tools"]:
             cmake_cmd.append("-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=yes")
             if sys.version_info[0] > 2:
                 cmake_cmd.append("-DUSE_PYTHON_VERSION=3.3")
@@ -1134,6 +1149,7 @@ class PysideBuild(_build):
                 "qt_prefix_dir": self.qtinfo.prefix_dir,
                 "qt_translations_dir": self.qtinfo.translations_dir,
                 "qt_qml_dir": self.qtinfo.qml_dir,
+                "target_arch": self.py_arch,
             }
             os.chdir(self.script_dir)
 
@@ -1191,6 +1207,7 @@ class PysideBuild(_build):
             raise RuntimeError("Could not find the location of the libclang "
                 "library inside the CMake cache file.")
 
+        target_name = None
         if is_win:
             # clang_lib_path points to the static import library
             # (lib/libclang.lib), whereas we want to copy the shared
@@ -1198,9 +1215,20 @@ class PysideBuild(_build):
             clang_lib_path = re.sub(r'lib/libclang.lib$', 'bin/libclang.dll',
                 clang_lib_path)
         else:
+            if sys.platform != 'darwin' and os.path.islink(clang_lib_path):
+                # On Linux, we get "libclang.so" from CMake which is
+                # a symlink:
+                # libclang.so -> libclang.so.6 -> libclang.so.6.0.
+                # shiboken2 links against libclang.so.6. So, we
+                # determine the target name by resolving just
+                # one symlink (note: os.path.realpath() resolves all).
+                target_name = os.readlink(clang_lib_path)
             # We want to resolve any symlink on Linux and macOS, and
             # copy the actual file.
             clang_lib_path = os.path.realpath(clang_lib_path)
+
+        if not target_name:
+            target_name = os.path.basename(clang_lib_path)
 
         # Path to directory containing libclang.
         clang_lib_dir = os.path.dirname(clang_lib_path)
@@ -1210,9 +1238,10 @@ class PysideBuild(_build):
         destination_dir = "{}/PySide2".format(os.path.join(self.script_dir,
             'pyside_package'))
         if os.path.exists(clang_lib_path):
-            log.info('Copying libclang shared library to the package folder.')
+            log.info('Copying libclang shared library {} to the package folder as {}.'.format(
+                     clang_lib_path, target_name))
             basename = os.path.basename(clang_lib_path)
-            destination_path = os.path.join(destination_dir, basename)
+            destination_path = os.path.join(destination_dir, target_name)
 
             # Need to modify permissions in case file is not writable
             # (a reinstall would cause a permission denied error).
@@ -1226,8 +1255,6 @@ class PysideBuild(_build):
         if sys.platform.startswith('linux'):
             pyside_libs = [lib for lib in os.listdir(
                 package_path) if filter_match(lib, ["*.so", "*.so.*"])]
-
-            patchelf_path = os.path.join(self.script_dir, "patchelf")
 
             def rpath_cmd(srcpath):
                 final_rpath = ''
@@ -1243,7 +1270,7 @@ class PysideBuild(_build):
                     if OPTION_STANDALONE:
                         qt_lib_dir = "$ORIGIN/Qt/lib"
                     final_rpath = local_rpath + ':' + qt_lib_dir
-                cmd = [patchelf_path, '--set-rpath', final_rpath, srcpath]
+                cmd = [self._patchelf_path, '--set-rpath', final_rpath, srcpath]
                 if run_process(cmd) != 0:
                     raise RuntimeError("Error patching rpath in " + srcpath)
 

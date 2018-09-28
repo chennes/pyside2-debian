@@ -46,7 +46,9 @@ public:
     AbstractMetaBuilderPrivate();
     ~AbstractMetaBuilderPrivate();
 
-    static FileModelItem buildDom(const QByteArrayList &arguments, unsigned clangFlags);
+    static FileModelItem buildDom(QByteArrayList arguments,
+                                  LanguageLevel level,
+                                  unsigned clangFlags);
     void traverseDom(const FileModelItem &dom);
 
     void dumpLog() const;
@@ -179,9 +181,6 @@ public:
     QString m_namespacePrefix;
 
     QSet<AbstractMetaClass *> m_setupInheritanceDone;
-
-    // QtScript
-    QSet<QString> m_qmetatypeDeclaredTypenames;
 
     QString m_logDirectory;
     QFileInfo m_globalHeader;

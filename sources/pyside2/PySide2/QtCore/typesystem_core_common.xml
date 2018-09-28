@@ -283,11 +283,8 @@
     <include file-name="QString" location="global"/>
     <conversion-rule>
         <native-to-target>
-        const int N = %in.length();
-        wchar_t *str = new wchar_t[N];
-        %in.toWCharArray(str);
-        PyObject *%out = PyUnicode_FromWideChar(str, N);
-        delete[] str;
+        QByteArray ba = %in.toUtf8();
+        PyObject *%out = PyUnicode_FromStringAndSize(ba.constData(), ba.size());
         return %out;
         </native-to-target>
         <target-to-native>
@@ -425,12 +422,13 @@
             converter.toCpp(pyIn, var.data());
             %out = var;
             </add-conversion>
-            <add-conversion type="PyDict">
+            <add-conversion type="PyDict" check="PyDict_CheckExact(%in)">
             QVariant ret = QVariant_convertToVariantMap(%in);
             %out = ret.isValid() ? ret : QVariant::fromValue&lt;PySide::PyObjectWrapper&gt;(%in);
             </add-conversion>
-            <add-conversion type="PySequence">
-            %out = QVariant_convertToVariantList(%in);
+            <add-conversion type="PyList" check="PyList_Check(%in)">
+            QVariant ret = QVariant_convertToVariantList(%in);
+            %out = ret.isValid() ? ret : QVariant::fromValue&lt;PySide::PyObjectWrapper&gt;(%in);
             </add-conversion>
             <add-conversion type="PyObject">
             // Is a shiboken type not known by Qt
@@ -463,16 +461,16 @@
             // tp_base does not always point to the first base class, but rather to the first
             // that has added any python fields or slots to its object layout.
             // See https://mail.python.org/pipermail/python-list/2009-January/520733.html
-            if (PepType(type)->tp_bases) {
-                for (int i = 0; i &lt; PyTuple_GET_SIZE(PepType(type)->tp_bases); ++i) {
-                    const char *derivedName = QVariant_resolveMetaType((PyTypeObject*)PyTuple_GET_ITEM(
-                                              PepType(type)->tp_bases, i), typeId);
+            if (type->tp_bases) {
+                for (int i = 0; i &lt; PyTuple_GET_SIZE(type->tp_bases); ++i) {
+                    const char *derivedName = QVariant_resolveMetaType(reinterpret_cast&lt;PyTypeObject *&gt;(PyTuple_GET_ITEM(
+                                              type->tp_bases, i)), typeId);
                     if (derivedName)
                         return derivedName;
                 }
             }
-            else if (PepType(type)->tp_base) {
-                return QVariant_resolveMetaType(PepType(type)->tp_base, typeId);
+            else if (type->tp_base) {
+                return QVariant_resolveMetaType(type->tp_base, typeId);
             }
         }
         *typeId = 0;
@@ -480,8 +478,12 @@
     }
     static QVariant QVariant_convertToValueList(PyObject *list)
     {
-        if (PySequence_Size(list) &lt; 1)
-            return QVariant();
+        if (PySequence_Size(list) &lt; 0) {
+             // clear the error if &lt; 0 which means no length at all
+             PyErr_Clear();
+             return QVariant();
+        }
+
         Shiboken::AutoDecRef element(PySequence_GetItem(list, 0));
         int typeId;
         const char *typeName = QVariant_resolveMetaType(element.cast&lt;PyTypeObject*&gt;(), &amp;typeId);
@@ -505,14 +507,26 @@
     static bool QVariant_isStringList(PyObject *list)
     {
         bool allString = true;
-        Shiboken::AutoDecRef fast(PySequence_Fast(list, "Failed to convert QVariantList"));
-        Py_ssize_t size = PySequence_Fast_GET_SIZE(fast.object());
-        for (int i = 0; i &lt; size; ++i) {
-            PyObject *item = PySequence_Fast_GET_ITEM(fast.object(), i);
-            if (!%CHECKTYPE[QString](item)) {
-                allString = false;
-                break;
+
+        if (PySequence_Check(list)) {
+            if (PySequence_Size(list) &lt; 0) {
+                 // clear the error if &lt; 0 which means no length at all
+                 PyErr_Clear();
+                 return false;
             }
+            Shiboken::AutoDecRef fast(PySequence_Fast(list, "Failed to convert QVariantList"));
+            Py_ssize_t size = PySequence_Fast_GET_SIZE(fast.object());
+            for (int i = 0; i &lt; size; ++i) {
+                PyObject *item = PySequence_Fast_GET_ITEM(fast.object(), i);
+                if (!%CHECKTYPE[QString](item)) {
+                    allString = false;
+                    break;
+                }
+            }
+        } else {
+            // If it is not a list or a derived list class
+            // we assume that will not be a String list neither.
+            allString = false;
         }
         return allString;
     }
@@ -541,6 +555,13 @@
         QVariant valueList = QVariant_convertToValueList(list);
         if (valueList.isValid())
             return valueList;
+
+        if (PySequence_Size(list) &lt; 0) {
+            // clear the error if &lt; 0 which means no length at all
+            PyErr_Clear();
+            return QVariant();
+        }
+
         QList&lt;QVariant&gt; lst;
         Shiboken::AutoDecRef fast(PySequence_Fast(list, "Failed to convert QVariantList"));
         Py_ssize_t size = PySequence_Fast_GET_SIZE(fast.object());
@@ -571,7 +592,7 @@
             </add-conversion>
             <add-conversion type="PyTypeObject">
             const char *typeName;
-            if (Shiboken::String::checkType(reinterpret_cast&lt;PyTypeObject*&gt;(%in)))
+            if (Shiboken::String::checkType(reinterpret_cast&lt;PyTypeObject *&gt;(%in)))
                 typeName = "QString";
             else if (%in == reinterpret_cast&lt;PyObject*&gt;(&amp;PyFloat_Type))
                 typeName = "double"; // float is a UserType in QVariant.
@@ -580,7 +601,7 @@
             else if (Py_TYPE(%in) == SbkObjectType_TypeF())
                 typeName = Shiboken::ObjectType::getOriginalName((SbkObjectType*)%in);
             else
-                typeName = PepType((reinterpret_cast&lt;PyTypeObject*&gt;(%in)))->tp_name;
+                typeName = reinterpret_cast&lt;PyTypeObject *&gt;(%in)->tp_name;
             %out = QVariant::nameToType(typeName);
             </add-conversion>
             <add-conversion type="PyString" check="Shiboken::String::check(%in)">
@@ -2114,11 +2135,6 @@
       <include file-name="QStringList" location="global"/>
       <include file-name="QSize" location="global"/>
     </extra-includes>
-    <modify-function signature="setSourceModel(QAbstractItemModel*)">
-      <modify-argument index="1">
-        <parent index="this" action="add"/>
-      </modify-argument>
-    </modify-function>
   </object-type>
   <object-type name="QSortFilterProxyModel">
     <!-- ### This reimplementation of "QObject::parent()" is used in C++ only
@@ -2509,6 +2525,9 @@
             %out = %OUTTYPE(Shiboken::String::toCString(%in), Shiboken::String::len(%in));
             #endif
             </add-conversion>
+            <add-conversion type="PyByteArray">
+            %out = %OUTTYPE(PyByteArray_AsString(%in), PyByteArray_Size(%in));
+            </add-conversion>
             <add-conversion type="PyString" check="Shiboken::String::check(%in) &amp;&amp; !PyUnicode_Check(%in)">
             %out = %OUTTYPE(Shiboken::String::toCString(%in), Shiboken::String::len(%in));
             </add-conversion>
@@ -2663,7 +2682,7 @@
             if (aux == NULL) {
                 return NULL;
             }
-            QByteArray b(PepType(Py_TYPE(%PYSELF))->tp_name);
+            QByteArray b(Py_TYPE(%PYSELF)->tp_name);
             #ifdef IS_PY3K
                 %PYARG_0 = PyUnicode_FromFormat("%s(%R)", b.constData(), aux);
             #else
@@ -2903,6 +2922,9 @@
                 Py_XDECREF(result);
                 return !result ? -1 : 0;
         </inject-code>
+    </add-function>
+    <add-function signature="__msetitem__">
+        <inject-code class="target" position="beginning" file="glue/qbytearray_msetitem.cpp" />
     </add-function>
   </value-type>
   <value-type name="QTextBoundaryFinder">
@@ -3214,8 +3236,8 @@
         // %FUNCTION_NAME() - disable generation of c++ function call
         (void) %2; // remove warning about unused variable
         Shiboken::AutoDecRef emptyTuple(PyTuple_New(0));
-        PyObject *pyTimer = PepType(Shiboken::SbkType&lt;QTimer&gt;())->tp_new(Shiboken::SbkType&lt;QTimer&gt;(), emptyTuple, 0);
-        PepType(Shiboken::SbkType&lt;QTimer&gt;())->tp_init(pyTimer, emptyTuple, 0);
+        PyObject *pyTimer = reinterpret_cast&lt;PyTypeObject *&gt;(Shiboken::SbkType&lt;QTimer&gt;())->tp_new(Shiboken::SbkType&lt;QTimer&gt;(), emptyTuple, 0);
+        reinterpret_cast&lt;PyTypeObject *&gt;(Shiboken::SbkType&lt;QTimer&gt;())->tp_init(pyTimer, emptyTuple, 0);
 
         QTimer* timer = %CONVERTTOCPP[QTimer*](pyTimer);
         Shiboken::AutoDecRef result(
@@ -3238,8 +3260,8 @@
         <inject-code class="target" position="beginning">
         // %FUNCTION_NAME() - disable generation of c++ function call
         Shiboken::AutoDecRef emptyTuple(PyTuple_New(0));
-        PyObject *pyTimer = PepType(Shiboken::SbkType&lt;QTimer&gt;())->tp_new(Shiboken::SbkType&lt;QTimer&gt;(), emptyTuple, 0);
-        PepType(Shiboken::SbkType&lt;QTimer&gt;())->tp_init(pyTimer, emptyTuple, 0);
+        PyObject *pyTimer = reinterpret_cast&lt;PyTypeObject *&gt;(Shiboken::SbkType&lt;QTimer&gt;())->tp_new(Shiboken::SbkType&lt;QTimer&gt;(), emptyTuple, 0);
+        reinterpret_cast&lt;PyTypeObject *&gt;(Shiboken::SbkType&lt;QTimer&gt;())->tp_init(pyTimer, emptyTuple, 0);
         QTimer* timer = %CONVERTTOCPP[QTimer*](pyTimer);
         timer->setSingleShot(true);
 
@@ -4292,6 +4314,7 @@ s1.addTransition(button.clicked, s1h)&lt;/code>
   </add-function>
 
   <inject-code class="native" position="beginning">
+    QT_BEGIN_NAMESPACE
     extern bool
     qRegisterResourceData(int,
                         const unsigned char *,
@@ -4303,6 +4326,7 @@ s1.addTransition(button.clicked, s1h)&lt;/code>
                             const unsigned char *,
                             const unsigned char *,
                             const unsigned char *);
+    QT_END_NAMESPACE
   </inject-code>
   <add-function signature="qRegisterResourceData(int,PyBytes,PyBytes,PyBytes)" return-type="bool">
     <inject-code class="target" position="beginning">

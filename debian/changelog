@@ -38,6 +38,7 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * Add missing build-deps 
   * Force pybuild to use distutils, not Cmake 
   * Replace deprecated upstream option --jobs with --parallel 
+  * Update documentation build 
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

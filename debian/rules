@@ -22,6 +22,7 @@ CXXFLAGS+=$(CPPFLAGS)
 
 # Until https://bugreports.qt.io/browse/PYSIDE-741 is fixed
 export PYBUILD_DISABLE_python3.7=test
+export PYBUILD_DISABLE_python3.8=test
 
 %:
 	dh $@ --with python2,python3,sphinxdoc --buildsystem=pybuild

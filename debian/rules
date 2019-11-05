@@ -8,7 +8,7 @@ ifeq ($(shell awk '/Package:/ {print $$2}' debian/control | grep -- -$(PYSIDE_MA
     $(error Please update package names for major version $(PYSIDE_MAJOR))
 endif
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-    OPTION_JOBS = --jobs=$(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
+    OPTION_JOBS = --parallel=$(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 endif
 
 export PYBUILD_NAME=pyside2

@@ -36,6 +36,7 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * New upstream version 5.13.2
   * Refresh patches and remove obsolete patches
   * Add missing build-deps 
+  * Force pybuild to use distutils, not Cmake 
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

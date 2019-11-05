@@ -12,6 +12,7 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 endif
 
 export PYBUILD_NAME=pyside2
+export PYBUILD_SYSTEM=distutils
 export PYBUILD_BUILD_ARGS=--relwithdebinfo --verbose-build --no-examples $(OPTION_JOBS)
 
 export MAIN_VERSION_UPSTREAM := $(shell echo $(DEB_VERSION_UPSTREAM))

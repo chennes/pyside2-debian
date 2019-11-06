@@ -50,6 +50,7 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * Switch to debhelper-compat 12 
   * Bump Standards-Version to 4.4.1 (no changes) 
   * Update installation of python3 module shiboken2 
+  * Add autopkgtest 
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

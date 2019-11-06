@@ -47,6 +47,7 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
      - python3-pyside2.qtwebengine
   * Update list of built files in debian/rules
   * Switch pyside2-tools to Python3 
+  * Switch to debhelper-compat 12 
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

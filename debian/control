@@ -7,7 +7,7 @@ Uploaders: Sophie Brun <sophie@freexian.com>,
 	   Sebastien Delafond <seb@debian.org>
 Build-Depends: chrpath,
                cmake (>= 3.1),
-               debhelper (>= 11),
+               debhelper-compat (= 12),
                dh-exec,
                dh-python,
 	       graphviz,

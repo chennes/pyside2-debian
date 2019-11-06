@@ -635,3 +635,47 @@ Description: Python bindings for Qt5 WebSockets module (Python 3)
  is its rich set of widgets that provide standard GUI functionality.
  .
  This package contains Python 3 bindings for the QtWebSockets module.
+
+Package: python3-pyside2.qtdatavisualization
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Description: Python bindings for Qt5 Data Visualization (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the QtDataVisualization module.
+
+Package: python3-pyside2.qtopenglfunctions
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Description: Python bindings for Qt5 Open GL Functions (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the OpenGLFunctions module.
+
+Package: python3-pyside2.qtscxml
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Description: Python bindings for Qt5 Scxml (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the Scxml module.
+
+Package: python3-pyside2.qtwebengine
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Description: Python bindings for Qt5 Web Engine (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the QtWebEngine module.

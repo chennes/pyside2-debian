@@ -77,6 +77,9 @@ Package: libpyside2-5.13
 Section: libs
 Architecture: any
 Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
+Conflicts: libpyside2-5.11
+Replaces: libpyside2-5.11
+Provides: libpyside2-5.11
 Description: Python 2 bindings for Qt5 (base files)
  pyside2 provides Python bindings for Qt 5.x framework.
  .
@@ -89,6 +92,9 @@ Package: libpyside2-py3-5.13
 Section: libs
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
+Conflicts: libpyside2-py3-5.11
+Replaces: libpyside2-py3-5.11
+Provides: libpyside2-py3-5.11
 Description: Python 3 bindings for Qt5 (base files)
  pyside2 provides Python bindings for Qt 5.x framework.
  .

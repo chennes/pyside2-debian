@@ -205,7 +205,7 @@ Description: CPython bindings generator for C++ libraries (common documentation)
 
 Package: pyside2-tools
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, python-pyside2uic, ${python:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends}, python3-pyside2uic, ${python3:Depends}
 Description: development tools for PySide2 (uic, rcc, lupdate)
  Qt is a cross-platform C++ application framework. Qt's primary feature
  is its rich set of widgets that provide standard GUI functionality.
@@ -215,18 +215,6 @@ Description: development tools for PySide2 (uic, rcc, lupdate)
   * pyside2-rcc - PySide resource compiler
   * pyside2-uic - Python User Interface Compiler for PySide
   * pyside2-lupdate - update Qt Linguist translation files for PySide
-
-Package: python-pyside2uic
-Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends}
-Description: User Interface Compiler for PySide2 (Python 2)
- Qt is a cross-platform C++ application framework. Qt's primary feature
- is its rich set of widgets that provide standard GUI functionality.
- .
- PySide2 ships Python bindings for the Qt5 framework.
- .
- This package contains the Python User Interface Compiler for PySide2 in
- Python 2.
 
 Package: python3-pyside2uic
 Architecture: all

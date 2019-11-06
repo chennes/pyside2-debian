@@ -45,7 +45,6 @@ override_dh_install-indep:
 	dh_install -X.doctrees
 	# drop specific Python2 or Python code in packages. Otherwise it
 	# will fail during the packages installation
-	rm -r debian/python-pyside2uic/usr/lib/python2.7/dist-packages/pyside2uic/port_v3
 	rm -r debian/python3-pyside2uic/usr/lib/python3/dist-packages/pyside2uic/port_v2
 
 override_dh_install-arch:

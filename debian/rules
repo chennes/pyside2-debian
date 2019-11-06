@@ -36,7 +36,7 @@ override_dh_auto_install:
 	# split files in the way we want it. But we echo the list of files
 	# built to make it easier to update *.install files.
 	echo ">>> In pyside*_{package,install}"
-	-find pyside_package pyside*_install
+	-find pyside*_install pyside*_build
 
 override_dh_makeshlibs:
 	dh_makeshlibs -VUpstream-Version

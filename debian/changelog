@@ -40,11 +40,12 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * Replace deprecated upstream option --jobs with --parallel 
   * Update documentation build 
   * Add a patch to support Python 3.8 (Closes: #942753) 
-  * Add new binary packages 
+  * Add new binary packages
      - python3-pyside2.qtdatavisualization
      - python3-pyside2.qtopenglfunctions
      - python3-pyside2.qtscxml
      - python3-pyside2.qtwebengine
+  * Update list of built files in debian/rules
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

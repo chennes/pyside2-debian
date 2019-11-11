@@ -53,6 +53,7 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * Add autopkgtest 
   * Add missing Conflicts/Replaces and Provides for libpyside2-* 
   * Add a patch to use python3 in pyside2-tools 
+  * Remove disable failing test in debian/rules 
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

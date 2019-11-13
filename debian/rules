@@ -13,7 +13,7 @@ endif
 
 export PYBUILD_NAME=pyside2
 export PYBUILD_SYSTEM=distutils
-export PYBUILD_BUILD_ARGS=--relwithdebinfo --verbose-build --no-examples $(OPTION_JOBS)
+export PYBUILD_BUILD_ARGS=--relwithdebinfo --verbose-build --no-examples --build-tests $(OPTION_JOBS)
 
 export MAIN_VERSION_UPSTREAM := $(shell echo $(DEB_VERSION_UPSTREAM))
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
@@ -56,3 +56,6 @@ override_dh_install-arch:
 	# /build/pyside2* (required to find lib during the build) but it's
 	# not what we need
 	debian/set-paths
+
+override_dh_auto_test:
+	xvfb-run python3 testrunner.py test

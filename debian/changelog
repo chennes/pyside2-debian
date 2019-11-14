@@ -56,7 +56,8 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * Remove disable failing test in debian/rules 
   * Add missing depends (Closes: #943709) 
   * Add missing Multi-Arch 
-  * Run the tests and add missing build-deps for tests 
+  * Run the tests and add missing build-deps for tests
+  * Remove useless build-dep pyqt5-dev
 
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 

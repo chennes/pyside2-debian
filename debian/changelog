@@ -59,6 +59,9 @@ pyside2 (5.13.2-1) UNRELEASED; urgency=medium
   * Run the tests and add missing build-deps for tests
   * Remove useless build-dep pyqt5-dev
 
+  [ Raphaël Hertzog ]
+  * Drop remaining python2 parts.
+
  -- Sophie Brun <sophie@freexian.com>  Fri, 15 Nov 2019 10:15:57 +0100
 
 pyside2 (5.11.2-3) unstable; urgency=medium

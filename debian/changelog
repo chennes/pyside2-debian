@@ -1,4 +1,4 @@
-pyside2 (5.13.2-1) UNRELEASED; urgency=medium
+pyside2 (5.13.2-1) unstable; urgency=medium
 
   [ Ondřej Nový ]
   * Remove almost all of Python 2 binary packages (no rdeps):

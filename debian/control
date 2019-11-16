@@ -78,7 +78,6 @@ Description: Python bindings for Qt5 (common documentation)
 Package: libpyside2-py3-5.13
 Section: libs
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
 Conflicts: libpyside2-py3-5.11
 Replaces: libpyside2-py3-5.11
@@ -105,7 +104,6 @@ Description: Python bindings for Qt5 (development files)
 
 Package: python3-pyside2.qtcore
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
 Suggests: python-pyside2-doc
 Description: Python bindings for Qt5 core module (Python 3)
@@ -131,7 +129,6 @@ Description: CPython bindings generator for C++ libraries
 Package: libshiboken2-py3-5.13
 Section: libs
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
 Description: CPython bindings generator for C++ libraries (Python3 shared library)
  Shiboken2 is a bindings generator for C++ libraries that outputs CPython
@@ -160,7 +157,6 @@ Description: CPython bindings generator for C++ libraries (development files)
 
 Package: shiboken2-doc
 Architecture: all
-Multi-Arch: foreign
 Section: doc
 Depends: ${misc:Depends}, ${sphinxdoc:Depends}
 Description: CPython bindings generator for C++ libraries (common documentation)
@@ -201,7 +197,6 @@ Description: User Interface Compiler for PySide2 (Python 3)
 
 Package: python3-pyside2.qtwidgets
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 Widgets module (Python 3)
@@ -214,7 +209,6 @@ Description: Python bindings for Qt5 Widgets module (Python 3)
 
 Package: python3-pyside2.qt3drender
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qt3dcore, python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 3DRender module (Python 3)
@@ -227,7 +221,6 @@ Description: Python bindings for Qt5 3DRender module (Python 3)
 
 Package: python3-pyside2.qtquick
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtnetwork, python3-pyside2.qtqml,
  python3-pyside2.qtgui
@@ -241,7 +234,6 @@ Description: Python bindings for Qt5 Quick module (Python 3)
 
 Package: python3-pyside2.qtpositioning
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Positioning module (Python 3)
@@ -254,7 +246,6 @@ Description: Python bindings for Qt5 Positioning module (Python 3)
 
 Package: python3-pyside2.qtx11extras
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 X11Extras module (Python 3)
@@ -267,7 +258,6 @@ Description: Python bindings for Qt5 X11Extras module (Python 3)
 
 Package: python3-pyside2.qtqml
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qtnetwork
 Description: Python bindings for Qt5 Qml module (Python 3)
@@ -280,7 +270,6 @@ Description: Python bindings for Qt5 Qml module (Python 3)
 
 Package: python3-pyside2.qtwebenginecore
 Architecture: amd64 arm64 armhf i386 mipsel
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 WebEngineCore module (Python 3)
@@ -293,7 +282,6 @@ Description: Python bindings for Qt5 WebEngineCore module (Python 3)
 
 Package: python3-pyside2.qttexttospeech
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 TextToSpeech module (Python 3)
@@ -306,7 +294,6 @@ Description: Python bindings for Qt5 TextToSpeech module (Python 3)
 
 Package: python3-pyside2.qthelp
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 Help module (Python 3)
@@ -319,7 +306,6 @@ Description: Python bindings for Qt5 Help module (Python 3)
 
 Package: python3-pyside2.qtscripttools
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtscript, python3-pyside2.qtwidgets, python3-pyside2.qtgui,
  python3-pyside2.qtcore
@@ -333,7 +319,6 @@ Description: Python bindings for Qt5 ScriptTools module (Python 3)
 
 Package: python3-pyside2.qtnetwork
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Network module (Python 3)
@@ -346,7 +331,6 @@ Description: Python bindings for Qt5 Network module (Python 3)
 
 Package: python3-pyside2.qtmultimediawidgets
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qtnetwork,
  python3-pyside2.qtwidgets, python3-pyside2.qtmultimedia
@@ -360,7 +344,6 @@ Description: Python bindings for Qt5 MultimediaWidgets module (Python 3)
 
 Package: python3-pyside2.qtlocation
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtpositioning
 Description: Python bindings for Qt5 Location module (Python 3)
@@ -373,7 +356,6 @@ Description: Python bindings for Qt5 Location module (Python 3)
 
 Package: python3-pyside2.qt3dlogic
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qt3dcore
 Description: Python bindings for Qt5 3DLogic module (Python 3)
@@ -386,7 +368,6 @@ Description: Python bindings for Qt5 3DLogic module (Python 3)
 
 Package: python3-pyside2.qtsensors
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Sensors module (Python 3)
@@ -399,7 +380,6 @@ Description: Python bindings for Qt5 Sensors module (Python 3)
 
 Package: python3-pyside2.qtmultimedia
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qtnetwork
 Description: Python bindings for Qt5 Multimedia module (Python 3)
@@ -412,7 +392,6 @@ Description: Python bindings for Qt5 Multimedia module (Python 3)
 
 Package: python3-pyside2.qtscript
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Script module (Python 3)
@@ -425,7 +404,6 @@ Description: Python bindings for Qt5 Script module (Python 3)
 
 Package: python3-pyside2.qtwebchannel
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 WebChannel module (Python 3)
@@ -438,7 +416,6 @@ Description: Python bindings for Qt5 WebChannel module (Python 3)
 
 Package: python3-pyside2.qtprintsupport
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 PrintSupport module (Python 3)
@@ -451,7 +428,6 @@ Description: Python bindings for Qt5 PrintSupport module (Python 3)
 
 Package: python3-pyside2.qtquickwidgets
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qtwidgets,
  python3-pyside2.qtnetwork, python3-pyside2.qtquick, python3-pyside2.qtqml
@@ -465,7 +441,6 @@ Description: Python bindings for Qt5 QuickWidgets module (Python 3)
 
 Package: python3-pyside2.qt3dinput
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qt3dcore, python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 3DInput module (Python 3)
@@ -478,7 +453,6 @@ Description: Python bindings for Qt5 3DInput module (Python 3)
 
 Package: python3-pyside2.qtxml
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Xml module (Python 3)
@@ -491,7 +465,6 @@ Description: Python bindings for Qt5 Xml module (Python 3)
 
 Package: python3-pyside2.qttest
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qtwidgets
 Description: Python bindings for Qt5 Test module (Python 3)
@@ -504,7 +477,6 @@ Description: Python bindings for Qt5 Test module (Python 3)
 
 Package: python3-pyside2.qtwebenginewidgets
 Architecture: amd64 arm64 armhf i386 mipsel
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtgui, python3-pyside2.qtwidgets,
  python3-pyside2.qtnetwork, python3-pyside2.qtwebchannel,
@@ -519,7 +491,6 @@ Description: Python bindings for Qt5 WebEngineWidgets module (Python 3)
 
 Package: python3-pyside2.qtconcurrent
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Concurrent module (Python 3)
@@ -532,7 +503,6 @@ Description: Python bindings for Qt5 Concurrent module (Python 3)
 
 Package: python3-pyside2.qtxmlpatterns
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 XmlPatterns module (Python 3)
@@ -545,7 +515,6 @@ Description: Python bindings for Qt5 XmlPatterns module (Python 3)
 
 Package: python3-pyside2.qtcharts
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 Charts module (Python 3)
@@ -558,7 +527,6 @@ Description: Python bindings for Qt5 Charts module (Python 3)
 
 Package: python3-pyside2.qtuitools
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtxml, python3-pyside2.qtcore,
  python3-pyside2.qtgui
@@ -572,7 +540,6 @@ Description: Python bindings for Qt5 UiTools module (Python 3)
 
 Package: python3-pyside2.qtopengl
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtcore, python3-pyside2.qtgui
 Description: Python bindings for Qt5 OpenGL module (Python 3)
@@ -585,7 +552,6 @@ Description: Python bindings for Qt5 OpenGL module (Python 3)
 
 Package: python3-pyside2.qt3dcore
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtgui, python3-pyside2.qtcore, python3-pyside2.qtnetwork
 Description: Python bindings for Qt5 3DCore module (Python 3)
@@ -598,7 +564,6 @@ Description: Python bindings for Qt5 3DCore module (Python 3)
 
 Package: python3-pyside2.qtsql
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtgui, python3-pyside2.qtcore
 Description: Python bindings for Qt5 Sql module (Python 3)
@@ -611,7 +576,6 @@ Description: Python bindings for Qt5 Sql module (Python 3)
 
 Package: python3-pyside2.qtgui
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Gui module (Python 3)
@@ -624,7 +588,6 @@ Description: Python bindings for Qt5 Gui module (Python 3)
 
 Package: python3-pyside2.qtsvg
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtwidgets, python3-pyside2.qtgui, python3-pyside2.qtcore
 Description: Python bindings for Qt5 Svg module (Python 3)
@@ -637,7 +600,6 @@ Description: Python bindings for Qt5 Svg module (Python 3)
 
 Package: python3-pyside2.qtwebsockets
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore, python3-pyside2.qtnetwork
 Description: Python bindings for Qt5 WebSockets module (Python 3)
@@ -650,7 +612,6 @@ Description: Python bindings for Qt5 WebSockets module (Python 3)
 
 Package: python3-pyside2.qtdatavisualization
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtgui, python3-pyside2.qtcore
 Description: Python bindings for Qt5 Data Visualization (Python 3)
@@ -663,7 +624,6 @@ Description: Python bindings for Qt5 Data Visualization (Python 3)
 
 Package: python3-pyside2.qtopenglfunctions
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtgui, python3-pyside2.qtcore
 Description: Python bindings for Qt5 Open GL Functions (Python 3)
@@ -676,7 +636,6 @@ Description: Python bindings for Qt5 Open GL Functions (Python 3)
 
 Package: python3-pyside2.qtscxml
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Scxml (Python 3)
@@ -689,7 +648,6 @@ Description: Python bindings for Qt5 Scxml (Python 3)
 
 Package: python3-pyside2.qtwebengine
 Architecture: any
-Multi-Arch: same
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtcore
 Description: Python bindings for Qt5 Web Engine (Python 3)

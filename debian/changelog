@@ -55,7 +55,6 @@ pyside2 (5.13.2-1) unstable; urgency=medium
   * Add a patch to use python3 in pyside2-tools 
   * Remove disable failing test in debian/rules 
   * Add missing depends (Closes: #943709) 
-  * Add missing Multi-Arch 
   * Run the tests and add missing build-deps for tests
   * Remove useless build-dep pyqt5-dev
 

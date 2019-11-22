@@ -13,7 +13,7 @@ Build-Depends: chrpath,
 	       graphviz,
                libclang-dev,
                libqt5charts5-dev,
-	       libqt5datavisualization5-dev,
+	       libqt5datavisualization5-dev [!mips64el !mipsel !mips],
                libqt5opengl5-dev,
 	       libqt5scxml5-bin,
 	       libqt5scxml5-dev,
@@ -611,7 +611,7 @@ Description: Python bindings for Qt5 WebSockets module (Python 3)
  This package contains Python 3 bindings for the QtWebSockets module.
 
 Package: python3-pyside2.qtdatavisualization
-Architecture: any
+Architecture: amd64 arm64 armel armhf i386 ppc64el s390x
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
  python3-pyside2.qtgui, python3-pyside2.qtcore
 Description: Python bindings for Qt5 Data Visualization (Python 3)

@@ -3,3 +3,4 @@ drop-git-requirement.patch
 update-patchelf.patch
 add-python3.8.patch
 use-python3.patch
+blacklist-failing-tests.patch

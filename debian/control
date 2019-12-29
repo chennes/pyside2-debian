@@ -144,7 +144,7 @@ Package: libshiboken2-dev
 Section: libdevel
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
- libshiboken2-py3-5.13 (= ${binary:Version}), python3-dev
+ libshiboken2-py3-5.13 (= ${binary:Version}), shiboken2 (= ${binary:Version}), python3-dev
 Description: CPython bindings generator for C++ libraries (development files)
  Shiboken2 is a bindings generator for C++ libraries that outputs CPython
  source code. It collects information from library headers, and then

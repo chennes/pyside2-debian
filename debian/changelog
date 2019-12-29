@@ -1,3 +1,19 @@
+pyside2 (5.13.2-2.2) unstable; urgency=medium
+
+  * Non-maintainer upload
+  * Update cmake paths for new locations
+
+ -- Gianfranco Costamagna <locutusofborg@debian.org>  Sun, 29 Dec 2019 22:44:55 +0100
+
+pyside2 (5.13.2-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload
+  * Add an explicit shiboken dependency to fix FTBFS for reverse-dependencies
+    cmake based, who expect it being installed (Closes: #946082)
+    - thanks Tommaso Colombo for the patch
+
+ -- Gianfranco Costamagna <locutusofborg@debian.org>  Tue, 24 Dec 2019 09:22:39 +0100
+
 pyside2 (5.13.2-2) unstable; urgency=medium
 
   * Do not build-depends on libqt5datavisualization5-dev on mipsel and

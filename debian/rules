@@ -7,6 +7,9 @@ PYSIDE_MAJOR := $(shell echo $(DEB_VERSION_UPSTREAM) | cut -d. -f1-2)
 ifeq ($(shell awk '/Package:/ {print $$2}' debian/control | grep -- -$(PYSIDE_MAJOR)$$),)
     $(error Please update package names for major version $(PYSIDE_MAJOR))
 endif
+ifeq ($(shell ls debian/lib* | grep -- -$(PYSIDE_MAJOR)),)
+    $(error Please update files debian/lib*.* for major version $(PYSIDE_MAJOR))
+endif
 ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     OPTION_JOBS = --parallel=$(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
 endif

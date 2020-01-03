@@ -1,3 +1,12 @@
+pyside2 (5.14.0-1) UNRELEASED; urgency=medium
+
+  * Team upload
+  * New upstream version 5.14.0. Closes: #945376, #947101
+  * Update patches (3 dropped, one new for Qt 5.12 compat)
+  * Use --ignore-git option instead of custom patch
+
+ -- Raphaël Hertzog <raphael@freexian.com>  Fri, 03 Jan 2020 14:54:39 +0100
+
 pyside2 (5.13.2-2.2) unstable; urgency=medium
 
   * Non-maintainer upload

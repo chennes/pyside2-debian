@@ -75,7 +75,7 @@ Description: Python bindings for Qt5 (common documentation)
  .
  This package contains the common documentation package.
 
-Package: libpyside2-py3-5.13
+Package: libpyside2-py3-5.14
 Section: libs
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
@@ -93,7 +93,7 @@ Description: Python 3 bindings for Qt5 (base files)
 Package: libpyside2-dev
 Section: libdevel
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}, libpyside2-py3-5.13 (= ${binary:Version})
+Depends: ${misc:Depends}, ${shlibs:Depends}, libpyside2-py3-5.14 (= ${binary:Version})
 Description: Python bindings for Qt5 (development files)
  pyside2 provides Python bindings for Qt 5.x framework.
  .
@@ -126,7 +126,7 @@ Description: CPython bindings generator for C++ libraries
  .
  Shiboken2 is the binding generator used to create the PySide2 bindings.
 
-Package: libshiboken2-py3-5.13
+Package: libshiboken2-py3-5.14
 Section: libs
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends}
@@ -144,7 +144,7 @@ Package: libshiboken2-dev
 Section: libdevel
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends},
- libshiboken2-py3-5.13 (= ${binary:Version}), shiboken2 (= ${binary:Version}), python3-dev
+ libshiboken2-py3-5.14 (= ${binary:Version}), shiboken2 (= ${binary:Version}), python3-dev
 Description: CPython bindings generator for C++ libraries (development files)
  Shiboken2 is a bindings generator for C++ libraries that outputs CPython
  source code. It collects information from library headers, and then

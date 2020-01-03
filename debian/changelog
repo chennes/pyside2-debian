@@ -4,8 +4,11 @@ pyside2 (5.14.0-1) UNRELEASED; urgency=medium
   * New upstream version 5.14.0. Closes: #945376, #947101
   * Update patches (3 dropped, one new for Qt 5.12 compat)
   * Use --ignore-git option instead of custom patch
+  * Update package names for version 5.14
+  * Drop python3-pyside2uic, there's no such library anymore
+  * Re-enable tests failing due to broken XDG_RUNTIME_DIR
 
- -- Raphaël Hertzog <raphael@freexian.com>  Fri, 03 Jan 2020 14:54:39 +0100
+ -- Raphaël Hertzog <raphael@freexian.com>  Fri, 03 Jan 2020 20:27:24 +0100
 
 pyside2 (5.13.2-2.2) unstable; urgency=medium
 

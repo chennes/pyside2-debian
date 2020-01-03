@@ -1,0 +1,24 @@
+From: =?utf-8?q?Rapha=C3=ABl_Hertzog?= <raphael@freexian.com>
+Date: Fri, 3 Jan 2020 14:52:10 +0100
+Subject: Fix build with Qt 5.12
+
+---
+ sources/pyside2/PySide2/QtCore/typesystem_core_common.xml | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/sources/pyside2/PySide2/QtCore/typesystem_core_common.xml b/sources/pyside2/PySide2/QtCore/typesystem_core_common.xml
+index 470e253..46631df 100644
+--- a/sources/pyside2/PySide2/QtCore/typesystem_core_common.xml
++++ b/sources/pyside2/PySide2/QtCore/typesystem_core_common.xml
+@@ -2830,7 +2830,10 @@
+     <include file-name="qobjectdefs.h" location="global"/>
+   </value-type>
+ 
+-  <object-type name="QMessageLogContext"/>
++  <!-- Temporary revert until we have Qt 5.14 in Debian -->
++  <object-type name="QMessageLogContext">
++    <modify-function signature="copy(const QMessageLogContext &amp;)" remove="all"/>
++  </object-type>
+ 
+   <value-type name="QMetaMethod">
+     <enum-type name="Access"/>

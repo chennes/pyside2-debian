@@ -58,8 +58,7 @@ License: BSD-2-clause
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Files: sources/pyside2/doc/pyhtml2devhelp.py
- sources/pyside2/tests/run_test.sh
+Files: sources/pyside2/tests/run_test.sh
  sources/pyside2/tests/Qt*
  sources/pyside2/tests/mac/qmacstyle_test.py
  sources/pyside2/tests/manually/*

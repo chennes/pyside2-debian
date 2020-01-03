@@ -44,6 +44,7 @@
 #include "sbkconverter.h"
 #include "sbkenum.h"
 #include "sbkstring.h"
+#include "sbkstaticstrings_p.h"
 #include "autodecref.h"
 #include "gilstate.h"
 #include <string>
@@ -56,6 +57,10 @@
 #include "signature.h"
 #include "qapp_macro.h"
 #include "voidptr.h"
+
+#if defined(__APPLE__)
+#include <dlfcn.h>
+#endif
 
 namespace {
     void _destroyParentInfo(SbkObject *obj, bool keepReference);
@@ -72,6 +77,17 @@ static void callDestructor(const Shiboken::DtorAccumulatorVisitor::DestructorEnt
 
 extern "C"
 {
+
+// PYSIDE-939: A general replacement for object_dealloc.
+void Sbk_object_dealloc(PyObject *self)
+{
+    if (PepRuntime_38_flag) {
+        // PYSIDE-939: Handling references correctly.
+        // This was not needed before Python 3.8 (Python issue 35810)
+        Py_DECREF(Py_TYPE(self));
+    }
+    Py_TYPE(self)->tp_free(self);
+}
 
 static void SbkObjectTypeDealloc(PyObject *pyObj);
 static PyObject *SbkObjectTypeTpNew(PyTypeObject *metatype, PyObject *args, PyObject *kwds);
@@ -160,11 +176,10 @@ patch_tp_new_wrapper(PyTypeObject *type)
      * The old tp_new_wrapper is added to all types that have tp_new.
      * We patch that with a version that ignores the heaptype flag.
      */
-    static PyObject *__new__ = nullptr;
+    auto newMethod = Shiboken::PyMagicName::new_();
     if (old_tp_new_wrapper == nullptr) {
-        if ((__new__ = Py_BuildValue("s", "__new__")) == nullptr)
-            return -1;
-        PyObject *func = PyDict_GetItem(PyType_Type.tp_dict, __new__);
+        PyObject *func = PyDict_GetItem(PyType_Type.tp_dict, newMethod);
+        assert(func);
         PyCFunctionObject *pycf_ob = reinterpret_cast<PyCFunctionObject *>(func);
         old_tp_new_wrapper = reinterpret_cast<ternaryfunc>(pycf_ob->m_ml->ml_meth);
     }
@@ -172,7 +187,7 @@ patch_tp_new_wrapper(PyTypeObject *type)
     Py_ssize_t i, n = PyTuple_GET_SIZE(mro);
     for (i = 0; i < n; i++) {
         type = reinterpret_cast<PyTypeObject *>(PyTuple_GET_ITEM(mro, i));
-        PyObject *existing = PyDict_GetItem(type->tp_dict, __new__);
+        PyObject *existing = PyDict_GetItem(type->tp_dict, newMethod);
         if (existing && PyCFunction_Check(existing)
                      && type->tp_flags & Py_TPFLAGS_HEAPTYPE) {
             auto *pycf_ob = reinterpret_cast<PyCFunctionObject *>(existing);
@@ -182,7 +197,7 @@ patch_tp_new_wrapper(PyTypeObject *type)
             if (existing_wrapper == old_tp_new_wrapper) {
                 PyObject *ob_type = reinterpret_cast<PyObject *>(type);
                 Shiboken::AutoDecRef func(PyCFunction_New(tp_new_methoddef, ob_type));
-                if (func.isNull() || PyDict_SetItem(type->tp_dict, __new__, func))
+                if (func.isNull() || PyDict_SetItem(type->tp_dict, newMethod, func))
                     return -1;
             }
         }
@@ -309,8 +324,32 @@ static void SbkDeallocWrapperCommon(PyObject *pyObj, bool canDelete)
     // Need to decref the type if this is the dealloc func; if type
     // is subclassed, that dealloc func will decref (see subtype_dealloc
     // in typeobject.c in the python sources)
-    bool needTypeDecref = (PyType_GetSlot(pyType, Py_tp_dealloc) == SbkDeallocWrapper
+    bool needTypeDecref = (false
+                           || PyType_GetSlot(pyType, Py_tp_dealloc) == SbkDeallocWrapper
                            || PyType_GetSlot(pyType, Py_tp_dealloc) == SbkDeallocWrapperWithPrivateDtor);
+    if (PepRuntime_38_flag) {
+        // PYSIDE-939: Additional rule: Also when a subtype is heap allocated,
+        // then the subtype_dealloc deref will be suppressed, and we need again
+        // to supply a decref.
+        needTypeDecref |= (pyType->tp_base->tp_flags & Py_TPFLAGS_HEAPTYPE) != 0;
+    }
+
+#if defined(__APPLE__)
+    // Just checking once that our assumptions are right.
+    if (false) {
+        void *p = PyType_GetSlot(pyType, Py_tp_dealloc);
+        Dl_info dl_info;
+        dladdr(p, &dl_info);
+        fprintf(stderr, "tp_dealloc is %s\n", dl_info.dli_sname);
+    }
+    // Gives one of our functions
+    //  "Sbk_object_dealloc"
+    //  "SbkDeallocWrapperWithPrivateDtor"
+    //  "SbkDeallocQAppWrapper"
+    //  "SbkDeallocWrapper"
+    // but for typedealloc_test.py we get
+    //  "subtype_dealloc"
+#endif
 
     // Ensure that the GC is no longer tracking this object to avoid a
     // possible reentrancy problem.  Since there are multiple steps involved
@@ -369,6 +408,11 @@ static void SbkDeallocWrapperCommon(PyObject *pyObj, bool canDelete)
 
     if (needTypeDecref)
         Py_DECREF(pyType);
+    if (PepRuntime_38_flag) {
+        // PYSIDE-939: Handling references correctly.
+        // This was not needed before Python 3.8 (Python issue 35810)
+        Py_DECREF(pyType);
+    }
 }
 
 void SbkDeallocWrapper(PyObject *pyObj)
@@ -412,6 +456,11 @@ void SbkObjectTypeDealloc(PyObject *pyObj)
 #ifndef Py_LIMITED_API
     Py_TRASHCAN_SAFE_END(pyObj);
 #endif
+    if (PepRuntime_38_flag) {
+        // PYSIDE-939: Handling references correctly.
+        // This was not needed before Python 3.8 (Python issue 35810)
+        Py_DECREF(Py_TYPE(pyObj));
+    }
 }
 
 PyObject *SbkObjectTypeTpNew(PyTypeObject *metatype, PyObject *args, PyObject *kwds)
@@ -453,7 +502,18 @@ PyObject *SbkObjectTypeTpNew(PyTypeObject *metatype, PyObject *args, PyObject *k
 
     // The meta type creates a new type when the Python programmer extends a wrapped C++ class.
     auto type_new = reinterpret_cast<newfunc>(PyType_Type.tp_new);
+
+    // PYSIDE-939: This is a temporary patch that circumvents the problem
+    // with Py_TPFLAGS_METHOD_DESCRIPTOR until this is finally solved.
+    // PyType_Ready uses mro(). We need to temporarily remove the flag from it's type.
+    // We cannot use PyMethodDescr_Type since it is not exported by Python 2.7 .
+    static PyTypeObject *PyMethodDescr_TypePtr = Py_TYPE(
+        PyObject_GetAttr(reinterpret_cast<PyObject *>(&PyType_Type), Shiboken::PyName::mro()));
+    auto hold = PyMethodDescr_TypePtr->tp_flags;
+    PyMethodDescr_TypePtr->tp_flags &= ~Py_TPFLAGS_METHOD_DESCRIPTOR;
     auto *newType = reinterpret_cast<SbkObjectType *>(type_new(metatype, args, kwds));
+    PyMethodDescr_TypePtr->tp_flags = hold;
+
     if (!newType)
         return nullptr;
 #if PY_VERSION_HEX < 0x03000000
@@ -552,12 +612,6 @@ PyObject *SbkQAppTpNew(PyTypeObject *subtype, PyObject *, PyObject *)
 #endif
     auto self = reinterpret_cast<SbkObject *>(MakeSingletonQAppWrapper(subtype));
     return self == nullptr ? nullptr : _setupNew(self, subtype);
-}
-
-void
-object_dealloc(PyObject *self)
-{
-    Py_TYPE(self)->tp_free(self);
 }
 
 PyObject *

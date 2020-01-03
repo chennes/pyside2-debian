@@ -81,7 +81,6 @@ if (typeObj) {
                 for (int i = 0; i < valuesSize; i++) {
                     PyObject *item = PyUnicode_FromString(valuesList[i].data());
                     PyList_SET_ITEM(list, i, item);
-                    Py_DECREF(item);
                 }
                 %PYARG_0 = list;
 
@@ -110,15 +109,23 @@ if (typeObj) {
         float asFloat = out.toFloat();
         %PYARG_0 = PyFloat_FromDouble(asFloat);
     } else if (typeObj == &PyBool_Type) {
-        %PYARG_0 = out.toBool() ? Py_True : Py_False;
+        if (out.toBool()) {
+            Py_INCREF(Py_True);
+            %PYARG_0 = Py_True;
+        } else {
+            Py_INCREF(Py_False);
+            %PYARG_0 = Py_False;
+        }
     }
     // TODO: PyDict_Type and PyTuple_Type
 }
 else {
-    if (!out.isValid())
+    if (!out.isValid()) {
+        Py_INCREF(Py_None);
         %PYARG_0 = Py_None;
-    else
+    } else {
         %PYARG_0 = %CONVERTTOPYTHON[QVariant](out);
+    }
 }
 
 // @snippet qsettings-value
@@ -325,7 +332,7 @@ PyModule_AddStringConstant(module, "__version__", qVersion());
 // @snippet qobject-connect
 static bool isDecorator(PyObject *method, PyObject *self)
 {
-    Shiboken::AutoDecRef methodName(PyObject_GetAttrString(method, "__name__"));
+    Shiboken::AutoDecRef methodName(PyObject_GetAttr(method, Shiboken::PyMagicName::name()));
     if (!PyObject_HasAttr(self, methodName))
         return true;
     Shiboken::AutoDecRef otherMethod(PyObject_GetAttr(self, methodName));
@@ -828,8 +835,8 @@ _findChildrenHelper(%CPPSELF, %2, reinterpret_cast<PyTypeObject *>(%PYARG_1), %P
 // @snippet qobject-tr
 QString result;
 if (QCoreApplication::instance()) {
-    PyObject *klass = PyObject_GetAttrString(%PYSELF, "__class__");
-    PyObject *cname = PyObject_GetAttrString(klass, "__name__");
+    PyObject *klass = PyObject_GetAttr(%PYSELF, Shiboken::PyMagicName::class_());
+    PyObject *cname = PyObject_GetAttr(klass, Shiboken::PyMagicName::name());
     result = QString(QCoreApplication::instance()->translate(Shiboken::String::toCString(cname),
                                                         /*   %1, %2, QCoreApplication::CodecForTr, %3)); */
                                                              %1, %2, %3));

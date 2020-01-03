@@ -162,6 +162,8 @@ private:
 
     bool importFileElement(const QXmlStreamAttributes &atts);
 
+    const TypeEntry *currentParentTypeEntry() const;
+    bool checkRootElement();
     void applyCommonAttributes(TypeEntry *type, QXmlStreamAttributes *attributes) const;
     PrimitiveTypeEntry *
         parsePrimitiveTypeEntry(const QXmlStreamReader &, const QString &name,
@@ -174,8 +176,8 @@ private:
                            const QVersionNumber &since, QXmlStreamAttributes *);
     FlagsTypeEntry *
         parseFlagsEntry(const QXmlStreamReader &, EnumTypeEntry *enumEntry,
-                        const QString &name, QString flagName,
-                        const QVersionNumber &since, QXmlStreamAttributes *);
+                        QString flagName, const QVersionNumber &since,
+                        QXmlStreamAttributes *);
 
     NamespaceTypeEntry *
         parseNamespaceTypeEntry(const QXmlStreamReader &,

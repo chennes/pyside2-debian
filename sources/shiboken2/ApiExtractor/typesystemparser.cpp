@@ -81,6 +81,7 @@ static inline QString preferredTargetLangTypeAttribute() { return QStringLiteral
 static inline QString removeAttribute() { return QStringLiteral("remove"); }
 static inline QString renameAttribute() { return QStringLiteral("rename"); }
 static inline QString readAttribute() { return QStringLiteral("read"); }
+static inline QString targetLangNameAttribute() { return QStringLiteral("target-lang-name"); }
 static inline QString writeAttribute() { return QStringLiteral("write"); }
 static inline QString replaceAttribute() { return QStringLiteral("replace"); }
 static inline QString toAttribute() { return QStringLiteral("to"); }
@@ -191,200 +192,200 @@ static EnumType functionName(QStringView needle, EnumType defaultValue = default
 ENUM_LOOKUP_BEGIN(TypeSystem::AllowThread, Qt::CaseInsensitive,
                   allowThreadFromAttribute, TypeSystem::AllowThread::Unspecified)
     {
-        {QStringViewLiteral("yes"), TypeSystem::AllowThread::Allow},
-        {QStringViewLiteral("true"), TypeSystem::AllowThread::Allow},
-        {QStringViewLiteral("auto"), TypeSystem::AllowThread::Auto},
-        {QStringViewLiteral("no"), TypeSystem::AllowThread::Disallow},
-        {QStringViewLiteral("false"), TypeSystem::AllowThread::Disallow},
+        {u"yes", TypeSystem::AllowThread::Allow},
+        {u"true", TypeSystem::AllowThread::Allow},
+        {u"auto", TypeSystem::AllowThread::Auto},
+        {u"no", TypeSystem::AllowThread::Disallow},
+        {u"false", TypeSystem::AllowThread::Disallow},
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(TypeSystem::Language, Qt::CaseInsensitive,
                   languageFromAttribute, TypeSystem::NoLanguage)
     {
-        {QStringViewLiteral("all"), TypeSystem::All}, // sorted!
-        {QStringViewLiteral("constructors"), TypeSystem::Constructors},
-        {QStringViewLiteral("destructor-function"), TypeSystem::DestructorFunction},
-        {QStringViewLiteral("interface"), TypeSystem::Interface},
-        {QStringViewLiteral("library-initializer"), TypeSystem::PackageInitializer},
-        {QStringViewLiteral("native"), TypeSystem::NativeCode}, // em algum lugar do cpp
-        {QStringViewLiteral("shell"), TypeSystem::ShellCode}, // coloca no header, mas antes da declaracao da classe
-        {QStringViewLiteral("shell-declaration"), TypeSystem::ShellDeclaration},
-        {QStringViewLiteral("target"), TypeSystem::TargetLangCode}  // em algum lugar do cpp
+        {u"all", TypeSystem::All}, // sorted!
+        {u"constructors", TypeSystem::Constructors},
+        {u"destructor-function", TypeSystem::DestructorFunction},
+        {u"interface", TypeSystem::Interface},
+        {u"library-initializer", TypeSystem::PackageInitializer},
+        {u"native", TypeSystem::NativeCode}, // em algum lugar do cpp
+        {u"shell", TypeSystem::ShellCode}, // coloca no header, mas antes da declaracao da classe
+        {u"shell-declaration", TypeSystem::ShellDeclaration},
+        {u"target", TypeSystem::TargetLangCode}  // em algum lugar do cpp
     };
 ENUM_LOOKUP_BINARY_SEARCH()
 
 ENUM_LOOKUP_BEGIN(TypeSystem::Ownership, Qt::CaseInsensitive,
                    ownershipFromFromAttribute, TypeSystem::InvalidOwnership)
     {
-        {QStringViewLiteral("target"), TypeSystem::TargetLangOwnership},
-        {QStringViewLiteral("c++"), TypeSystem::CppOwnership},
-        {QStringViewLiteral("default"), TypeSystem::DefaultOwnership}
+        {u"target", TypeSystem::TargetLangOwnership},
+        {u"c++", TypeSystem::CppOwnership},
+        {u"default", TypeSystem::DefaultOwnership}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(AddedFunction::Access, Qt::CaseInsensitive,
                   addedFunctionAccessFromAttribute, AddedFunction::InvalidAccess)
     {
-        {QStringViewLiteral("public"), AddedFunction::Public},
-        {QStringViewLiteral("protected"), AddedFunction::Protected},
+        {u"public", AddedFunction::Public},
+        {u"protected", AddedFunction::Protected},
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(Modification::Modifiers, Qt::CaseSensitive,
                   modifierFromAttribute, Modification::InvalidModifier)
     {
-        {QStringViewLiteral("private"), Modification::Private},
-        {QStringViewLiteral("public"), Modification::Public},
-        {QStringViewLiteral("protected"), Modification::Protected},
-        {QStringViewLiteral("friendly"), Modification::Friendly},
-        {QStringViewLiteral("rename"), Modification::Rename},
-        {QStringViewLiteral("final"), Modification::Final},
-        {QStringViewLiteral("non-final"), Modification::NonFinal}
+        {u"private", Modification::Private},
+        {u"public", Modification::Public},
+        {u"protected", Modification::Protected},
+        {u"friendly", Modification::Friendly},
+        {u"rename", Modification::Rename},
+        {u"final", Modification::Final},
+        {u"non-final", Modification::NonFinal}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(ReferenceCount::Action, Qt::CaseInsensitive,
                   referenceCountFromAttribute, ReferenceCount::Invalid)
     {
-        {QStringViewLiteral("add"), ReferenceCount::Add},
-        {QStringViewLiteral("add-all"), ReferenceCount::AddAll},
-        {QStringViewLiteral("remove"), ReferenceCount::Remove},
-        {QStringViewLiteral("set"), ReferenceCount::Set},
-        {QStringViewLiteral("ignore"), ReferenceCount::Ignore}
+        {u"add", ReferenceCount::Add},
+        {u"add-all", ReferenceCount::AddAll},
+        {u"remove", ReferenceCount::Remove},
+        {u"set", ReferenceCount::Set},
+        {u"ignore", ReferenceCount::Ignore}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(ArgumentOwner::Action, Qt::CaseInsensitive,
                   argumentOwnerActionFromAttribute, ArgumentOwner::Invalid)
     {
-        {QStringViewLiteral("add"), ArgumentOwner::Add},
-        {QStringViewLiteral("remove"), ArgumentOwner::Remove}
+        {u"add", ArgumentOwner::Add},
+        {u"remove", ArgumentOwner::Remove}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(TypeSystem::CodeSnipPosition, Qt::CaseInsensitive,
                   codeSnipPositionFromAttribute, TypeSystem::CodeSnipPositionInvalid)
     {
-        {QStringViewLiteral("beginning"), TypeSystem::CodeSnipPositionBeginning},
-        {QStringViewLiteral("end"), TypeSystem::CodeSnipPositionEnd},
-        {QStringViewLiteral("declaration"), TypeSystem::CodeSnipPositionDeclaration},
-        {QStringViewLiteral("prototype-initialization"), TypeSystem::CodeSnipPositionPrototypeInitialization},
-        {QStringViewLiteral("constructor-initialization"), TypeSystem::CodeSnipPositionConstructorInitialization},
-        {QStringViewLiteral("constructor"), TypeSystem::CodeSnipPositionConstructor}
+        {u"beginning", TypeSystem::CodeSnipPositionBeginning},
+        {u"end", TypeSystem::CodeSnipPositionEnd},
+        {u"declaration", TypeSystem::CodeSnipPositionDeclaration},
+        {u"prototype-initialization", TypeSystem::CodeSnipPositionPrototypeInitialization},
+        {u"constructor-initialization", TypeSystem::CodeSnipPositionConstructorInitialization},
+        {u"constructor", TypeSystem::CodeSnipPositionConstructor}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(Include::IncludeType, Qt::CaseInsensitive,
                   locationFromAttribute, Include::InvalidInclude)
     {
-        {QStringViewLiteral("global"), Include::IncludePath},
-        {QStringViewLiteral("local"), Include::LocalPath},
-        {QStringViewLiteral("target"), Include::TargetLangImport}
+        {u"global", Include::IncludePath},
+        {u"local", Include::LocalPath},
+        {u"target", Include::TargetLangImport}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(TypeSystem::DocModificationMode, Qt::CaseInsensitive,
                   docModificationFromAttribute, TypeSystem::DocModificationInvalid)
     {
-        {QStringViewLiteral("append"), TypeSystem::DocModificationAppend},
-        {QStringViewLiteral("prepend"), TypeSystem::DocModificationPrepend},
-        {QStringViewLiteral("replace"), TypeSystem::DocModificationReplace}
+        {u"append", TypeSystem::DocModificationAppend},
+        {u"prepend", TypeSystem::DocModificationPrepend},
+        {u"replace", TypeSystem::DocModificationReplace}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(ContainerTypeEntry::Type, Qt::CaseSensitive,
                   containerTypeFromAttribute, ContainerTypeEntry::NoContainer)
     {
-        {QStringViewLiteral("list"), ContainerTypeEntry::ListContainer},
-        {QStringViewLiteral("string-list"), ContainerTypeEntry::StringListContainer},
-        {QStringViewLiteral("linked-list"), ContainerTypeEntry::LinkedListContainer},
-        {QStringViewLiteral("vector"), ContainerTypeEntry::VectorContainer},
-        {QStringViewLiteral("stack"), ContainerTypeEntry::StackContainer},
-        {QStringViewLiteral("queue"), ContainerTypeEntry::QueueContainer},
-        {QStringViewLiteral("set"), ContainerTypeEntry::SetContainer},
-        {QStringViewLiteral("map"), ContainerTypeEntry::MapContainer},
-        {QStringViewLiteral("multi-map"), ContainerTypeEntry::MultiMapContainer},
-        {QStringViewLiteral("hash"), ContainerTypeEntry::HashContainer},
-        {QStringViewLiteral("multi-hash"), ContainerTypeEntry::MultiHashContainer},
-        {QStringViewLiteral("pair"), ContainerTypeEntry::PairContainer}
+        {u"list", ContainerTypeEntry::ListContainer},
+        {u"string-list", ContainerTypeEntry::StringListContainer},
+        {u"linked-list", ContainerTypeEntry::LinkedListContainer},
+        {u"vector", ContainerTypeEntry::VectorContainer},
+        {u"stack", ContainerTypeEntry::StackContainer},
+        {u"queue", ContainerTypeEntry::QueueContainer},
+        {u"set", ContainerTypeEntry::SetContainer},
+        {u"map", ContainerTypeEntry::MapContainer},
+        {u"multi-map", ContainerTypeEntry::MultiMapContainer},
+        {u"hash", ContainerTypeEntry::HashContainer},
+        {u"multi-hash", ContainerTypeEntry::MultiHashContainer},
+        {u"pair", ContainerTypeEntry::PairContainer}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(TypeRejection::MatchType, Qt::CaseSensitive,
                   typeRejectionFromAttribute, TypeRejection::Invalid)
     {
-        {QStringViewLiteral("class"), TypeRejection::ExcludeClass},
-        {QStringViewLiteral("function-name"), TypeRejection::Function},
-        {QStringViewLiteral("field-name"), TypeRejection::Field},
-        {QStringViewLiteral("enum-name"), TypeRejection::Enum },
-        {QStringViewLiteral("argument-type"), TypeRejection::ArgumentType},
-        {QStringViewLiteral("return-type"), TypeRejection::ReturnType}
+        {u"class", TypeRejection::ExcludeClass},
+        {u"function-name", TypeRejection::Function},
+        {u"field-name", TypeRejection::Field},
+        {u"enum-name", TypeRejection::Enum },
+        {u"argument-type", TypeRejection::ArgumentType},
+        {u"return-type", TypeRejection::ReturnType}
     };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(TypeSystem::ExceptionHandling, Qt::CaseSensitive,
                   exceptionHandlingFromAttribute, TypeSystem::ExceptionHandling::Unspecified)
 {
-    {QStringViewLiteral("no"), TypeSystem::ExceptionHandling::Off},
-    {QStringViewLiteral("false"), TypeSystem::ExceptionHandling::Off},
-    {QStringViewLiteral("auto-off"), TypeSystem::ExceptionHandling::AutoDefaultToOff},
-    {QStringViewLiteral("auto-on"), TypeSystem::ExceptionHandling::AutoDefaultToOn},
-    {QStringViewLiteral("yes"), TypeSystem::ExceptionHandling::On},
-    {QStringViewLiteral("true"), TypeSystem::ExceptionHandling::On},
+    {u"no", TypeSystem::ExceptionHandling::Off},
+    {u"false", TypeSystem::ExceptionHandling::Off},
+    {u"auto-off", TypeSystem::ExceptionHandling::AutoDefaultToOff},
+    {u"auto-on", TypeSystem::ExceptionHandling::AutoDefaultToOn},
+    {u"yes", TypeSystem::ExceptionHandling::On},
+    {u"true", TypeSystem::ExceptionHandling::On},
 };
 ENUM_LOOKUP_LINEAR_SEARCH()
 
 ENUM_LOOKUP_BEGIN(StackElement::ElementType, Qt::CaseInsensitive,
                   elementFromTag, StackElement::None)
     {
-        {QStringViewLiteral("access"), StackElement::Access}, // sorted!
-        {QStringViewLiteral("add-conversion"), StackElement::AddConversion},
-        {QStringViewLiteral("add-function"), StackElement::AddFunction},
-        {QStringViewLiteral("argument-map"), StackElement::ArgumentMap},
-        {QStringViewLiteral("array"), StackElement::Array},
-        {QStringViewLiteral("container-type"), StackElement::ContainerTypeEntry},
-        {QStringViewLiteral("conversion-rule"), StackElement::ConversionRule},
-        {QStringViewLiteral("custom-constructor"), StackElement::CustomMetaConstructor},
-        {QStringViewLiteral("custom-destructor"), StackElement::CustomMetaDestructor},
-        {QStringViewLiteral("custom-type"), StackElement::CustomTypeEntry},
-        {QStringViewLiteral("define-ownership"), StackElement::DefineOwnership},
-        {QStringViewLiteral("enum-type"), StackElement::EnumTypeEntry},
-        {QStringViewLiteral("extra-includes"), StackElement::ExtraIncludes},
-        {QStringViewLiteral("function"), StackElement::FunctionTypeEntry},
-        {QStringViewLiteral("include"), StackElement::Include},
-        {QStringViewLiteral("inject-code"), StackElement::InjectCode},
-        {QStringViewLiteral("inject-documentation"), StackElement::InjectDocumentation},
-        {QStringViewLiteral("insert-template"), StackElement::TemplateInstanceEnum},
-        {QStringViewLiteral("interface-type"), StackElement::InterfaceTypeEntry},
-        {QStringViewLiteral("load-typesystem"), StackElement::LoadTypesystem},
-        {QStringViewLiteral("modify-argument"), StackElement::ModifyArgument},
-        {QStringViewLiteral("modify-documentation"), StackElement::ModifyDocumentation},
-        {QStringViewLiteral("modify-field"), StackElement::ModifyField},
-        {QStringViewLiteral("modify-function"), StackElement::ModifyFunction},
-        {QStringViewLiteral("namespace-type"), StackElement::NamespaceTypeEntry},
-        {QStringViewLiteral("native-to-target"), StackElement::NativeToTarget},
-        {QStringViewLiteral("no-null-pointer"), StackElement::NoNullPointers},
-        {QStringViewLiteral("object-type"), StackElement::ObjectTypeEntry},
-        {QStringViewLiteral("parent"), StackElement::ParentOwner},
-        {QStringViewLiteral("primitive-type"), StackElement::PrimitiveTypeEntry},
-        {QStringViewLiteral("reference-count"), StackElement::ReferenceCount},
-        {QStringViewLiteral("reject-enum-value"), StackElement::RejectEnumValue},
-        {QStringViewLiteral("rejection"), StackElement::Rejection},
-        {QStringViewLiteral("remove"), StackElement::Removal},
-        {QStringViewLiteral("remove-argument"), StackElement::RemoveArgument},
-        {QStringViewLiteral("remove-default-expression"), StackElement::RemoveDefaultExpression},
-        {QStringViewLiteral("rename"), StackElement::Rename},
-        {QStringViewLiteral("replace"), StackElement::Replace},
-        {QStringViewLiteral("replace-default-expression"), StackElement::ReplaceDefaultExpression},
-        {QStringViewLiteral("replace-type"), StackElement::ReplaceType},
-        {QStringViewLiteral("smart-pointer-type"), StackElement::SmartPointerTypeEntry},
-        {QStringViewLiteral("suppress-warning"), StackElement::SuppressedWarning},
-        {QStringViewLiteral("target-to-native"), StackElement::TargetToNative},
-        {QStringViewLiteral("template"), StackElement::Template},
-        {QStringViewLiteral("typedef-type"), StackElement::TypedefTypeEntry},
-        {QStringViewLiteral("typesystem"), StackElement::Root},
-        {QStringViewLiteral("value-type"), StackElement::ValueTypeEntry},
+        {u"access", StackElement::Access}, // sorted!
+        {u"add-conversion", StackElement::AddConversion},
+        {u"add-function", StackElement::AddFunction},
+        {u"argument-map", StackElement::ArgumentMap},
+        {u"array", StackElement::Array},
+        {u"container-type", StackElement::ContainerTypeEntry},
+        {u"conversion-rule", StackElement::ConversionRule},
+        {u"custom-constructor", StackElement::CustomMetaConstructor},
+        {u"custom-destructor", StackElement::CustomMetaDestructor},
+        {u"custom-type", StackElement::CustomTypeEntry},
+        {u"define-ownership", StackElement::DefineOwnership},
+        {u"enum-type", StackElement::EnumTypeEntry},
+        {u"extra-includes", StackElement::ExtraIncludes},
+        {u"function", StackElement::FunctionTypeEntry},
+        {u"include", StackElement::Include},
+        {u"inject-code", StackElement::InjectCode},
+        {u"inject-documentation", StackElement::InjectDocumentation},
+        {u"insert-template", StackElement::TemplateInstanceEnum},
+        {u"interface-type", StackElement::InterfaceTypeEntry},
+        {u"load-typesystem", StackElement::LoadTypesystem},
+        {u"modify-argument", StackElement::ModifyArgument},
+        {u"modify-documentation", StackElement::ModifyDocumentation},
+        {u"modify-field", StackElement::ModifyField},
+        {u"modify-function", StackElement::ModifyFunction},
+        {u"namespace-type", StackElement::NamespaceTypeEntry},
+        {u"native-to-target", StackElement::NativeToTarget},
+        {u"no-null-pointer", StackElement::NoNullPointers},
+        {u"object-type", StackElement::ObjectTypeEntry},
+        {u"parent", StackElement::ParentOwner},
+        {u"primitive-type", StackElement::PrimitiveTypeEntry},
+        {u"reference-count", StackElement::ReferenceCount},
+        {u"reject-enum-value", StackElement::RejectEnumValue},
+        {u"rejection", StackElement::Rejection},
+        {u"remove", StackElement::Removal},
+        {u"remove-argument", StackElement::RemoveArgument},
+        {u"remove-default-expression", StackElement::RemoveDefaultExpression},
+        {u"rename", StackElement::Rename},
+        {u"replace", StackElement::Replace},
+        {u"replace-default-expression", StackElement::ReplaceDefaultExpression},
+        {u"replace-type", StackElement::ReplaceType},
+        {u"smart-pointer-type", StackElement::SmartPointerTypeEntry},
+        {u"suppress-warning", StackElement::SuppressedWarning},
+        {u"target-to-native", StackElement::TargetToNative},
+        {u"template", StackElement::Template},
+        {u"typedef-type", StackElement::TypedefTypeEntry},
+        {u"typesystem", StackElement::Root},
+        {u"value-type", StackElement::ValueTypeEntry},
     };
 ENUM_LOOKUP_BINARY_SEARCH()
 
@@ -991,17 +992,17 @@ static bool convertRemovalAttribute(QStringView remove, Modification& mod, QStri
     if (remove.isEmpty())
         return true;
 #ifdef QTBUG_69389_FIXED
-    if (remove.compare(QStringViewLiteral("all"), Qt::CaseInsensitive) == 0) {
+    if (remove.compare(u"all", Qt::CaseInsensitive) == 0) {
 #else
-    if (QtPrivate::compareStrings(remove, QStringViewLiteral("all"), Qt::CaseInsensitive) == 0) {
+    if (QtPrivate::compareStrings(remove, u"all", Qt::CaseInsensitive) == 0) {
 #endif
         mod.removal = TypeSystem::All;
         return true;
     }
 #ifdef QTBUG_69389_FIXED
-    if (remove.compare(QStringViewLiteral("target"), Qt::CaseInsensitive) == 0) {
+    if (remove.compare(u"target", Qt::CaseInsensitive) == 0) {
 #else
-    if (QtPrivate::compareStrings(remove, QStringViewLiteral("target"), Qt::CaseInsensitive) == 0) {
+    if (QtPrivate::compareStrings(remove, u"target", Qt::CaseInsensitive) == 0) {
 #endif
         mod.removal = TypeSystem::TargetLangAndNativeCode;
         return true;
@@ -1040,41 +1041,59 @@ static QString checkSignatureError(const QString& signature, const QString& tag)
     return QString();
 }
 
+inline const TypeEntry *TypeSystemParser::currentParentTypeEntry() const
+{
+    return m_current ? m_current->entry : nullptr;
+}
+
+bool TypeSystemParser::checkRootElement()
+{
+    const bool ok = currentParentTypeEntry() != nullptr;
+    if (!ok)
+        m_error = msgNoRootTypeSystemEntry();
+    return ok;
+}
+
 void TypeSystemParser::applyCommonAttributes(TypeEntry *type, QXmlStreamAttributes *attributes) const
 {
     type->setCodeGeneration(m_generate);
     const int revisionIndex =
-        indexOfAttribute(*attributes, QStringViewLiteral("revision"));
+        indexOfAttribute(*attributes, u"revision");
     if (revisionIndex != -1)
         type->setRevision(attributes->takeAt(revisionIndex).value().toInt());
 }
 
 FlagsTypeEntry *
     TypeSystemParser::parseFlagsEntry(const QXmlStreamReader &,
-                             EnumTypeEntry *enumEntry,
-                             const QString &name, QString flagName,
+                             EnumTypeEntry *enumEntry, QString flagName,
                              const QVersionNumber &since,
                              QXmlStreamAttributes *attributes)
 
 {
-    FlagsTypeEntry *ftype = new FlagsTypeEntry(QLatin1String("QFlags<") + name + QLatin1Char('>'), since);
+    if (!checkRootElement())
+        return nullptr;
+    auto ftype = new FlagsTypeEntry(QLatin1String("QFlags<") + enumEntry->name() + QLatin1Char('>'),
+                                    since,
+                                    currentParentTypeEntry()->typeSystemTypeEntry());
     ftype->setOriginator(enumEntry);
     ftype->setTargetLangPackage(enumEntry->targetLangPackage());
-    // Try to get the guess the qualified flag name
-    const int lastSepPos = name.lastIndexOf(colonColon());
-    if (lastSepPos >= 0 && !flagName.contains(colonColon()))
-        flagName.prepend(name.left(lastSepPos + 2));
+    // Try toenumEntry get the guess the qualified flag name
+    if (!flagName.contains(colonColon())) {
+        auto eq = enumEntry->qualifier();
+        if (!eq.isEmpty())
+            flagName.prepend(eq + colonColon());
+    }
 
     ftype->setOriginalName(flagName);
     applyCommonAttributes(ftype, attributes);
-    QString n = ftype->originalName();
 
-    QStringList lst = n.split(colonColon());
+    QStringList lst = flagName.split(colonColon());
+    const QString targetLangFlagName = QStringList(lst.mid(0, lst.size() - 1)).join(QLatin1Char('.'));
     const QString &targetLangQualifier = enumEntry->targetLangQualifier();
-    if (QStringList(lst.mid(0, lst.size() - 1)).join(colonColon()) != targetLangQualifier) {
+    if (targetLangFlagName != targetLangQualifier) {
         qCWarning(lcShiboken).noquote().nospace()
-            << QStringLiteral("enum %1 and flags %2 differ in qualifiers")
-                              .arg(targetLangQualifier, lst.constFirst());
+            << QStringLiteral("enum %1 and flags %2 (%3) differ in qualifiers")
+                              .arg(targetLangQualifier, lst.constFirst(), targetLangFlagName);
     }
 
     ftype->setFlagsName(lst.constLast());
@@ -1084,7 +1103,7 @@ FlagsTypeEntry *
     m_database->addType(ftype);
 
     const int revisionIndex =
-        indexOfAttribute(*attributes, QStringViewLiteral("flags-revision"));
+        indexOfAttribute(*attributes, u"flags-revision");
     ftype->setRevision(revisionIndex != -1
                        ? attributes->takeAt(revisionIndex).value().toInt()
                        : enumEntry->revision());
@@ -1096,6 +1115,8 @@ SmartPointerTypeEntry *
                                     const QString &name, const QVersionNumber &since,
                                     QXmlStreamAttributes *attributes)
 {
+    if (!checkRootElement())
+        return nullptr;
     QString smartPointerType;
     QString getter;
     QString refCountMethodName;
@@ -1138,7 +1159,8 @@ SmartPointerTypeEntry *
         return nullptr;
     }
 
-    auto *type = new SmartPointerTypeEntry(name, getter, smartPointerType, refCountMethodName, since);
+    auto *type = new SmartPointerTypeEntry(name, getter, smartPointerType,
+                                           refCountMethodName, since, currentParentTypeEntry());
     applyCommonAttributes(type, attributes);
     return type;
 }
@@ -1148,12 +1170,14 @@ PrimitiveTypeEntry *
                                      const QString &name, const QVersionNumber &since,
                                      QXmlStreamAttributes *attributes)
 {
-    auto *type = new PrimitiveTypeEntry(name, since);
+    if (!checkRootElement())
+        return nullptr;
+    auto *type = new PrimitiveTypeEntry(name, since, currentParentTypeEntry());
     applyCommonAttributes(type, attributes);
     for (int i = attributes->size() - 1; i >= 0; --i) {
         const QStringRef name = attributes->at(i).qualifiedName();
-        if (name == QLatin1String("target-lang-name")) {
-             type->setTargetLangName(attributes->takeAt(i).value().toString());
+        if (name == targetLangNameAttribute()) {
+            type->setTargetLangName(attributes->takeAt(i).value().toString());
         } else if (name == QLatin1String("target-lang-api-name")) {
             type->setTargetLangApiName(attributes->takeAt(i).value().toString());
         } else if (name == preferredConversionAttribute()) {
@@ -1168,8 +1192,6 @@ PrimitiveTypeEntry *
         }
     }
 
-    if (type->targetLangName().isEmpty())
-        type->setTargetLangName(type->name());
     if (type->targetLangApiName().isEmpty())
         type->setTargetLangApiName(type->name());
     type->setTargetLangPackage(m_defaultPackage);
@@ -1181,7 +1203,9 @@ ContainerTypeEntry *
                                      const QString &name, const QVersionNumber &since,
                                      QXmlStreamAttributes *attributes)
 {
-    const int typeIndex = indexOfAttribute(*attributes, QStringViewLiteral("type"));
+    if (!checkRootElement())
+        return nullptr;
+    const int typeIndex = indexOfAttribute(*attributes, u"type");
     if (typeIndex == -1) {
         m_error = QLatin1String("no 'type' attribute specified");
         return nullptr;
@@ -1192,24 +1216,19 @@ ContainerTypeEntry *
         m_error = QLatin1String("there is no container of type ") + typeName.toString();
         return nullptr;
     }
-    auto *type = new ContainerTypeEntry(name, containerType, since);
+    auto *type = new ContainerTypeEntry(name, containerType, since, currentParentTypeEntry());
     applyCommonAttributes(type, attributes);
     return type;
 }
 
 EnumTypeEntry *
     TypeSystemParser::parseEnumTypeEntry(const QXmlStreamReader &reader,
-                                const QString &fullName, const QVersionNumber &since,
+                                const QString &name, const QVersionNumber &since,
                                 QXmlStreamAttributes *attributes)
 {
-    QString scope;
-    QString name = fullName;
-    const int sep = fullName.lastIndexOf(colonColon());
-    if (sep != -1) {
-        scope = fullName.left(sep);
-        name = fullName.right(fullName.size() - sep - 2);
-    }
-    auto *entry = new EnumTypeEntry(scope, name, since);
+    if (!checkRootElement())
+        return nullptr;
+    auto *entry = new EnumTypeEntry(name, since, currentParentTypeEntry());
     applyCommonAttributes(entry, attributes);
     entry->setTargetLangPackage(m_defaultPackage);
 
@@ -1237,7 +1256,7 @@ EnumTypeEntry *
     if (!flagNames.isEmpty()) {
         const QStringList &flagNameList = flagNames.split(QLatin1Char(','));
         for (const QString &flagName : flagNameList)
-            parseFlagsEntry(reader, entry, fullName, flagName.trimmed(), since, attributes);
+            parseFlagsEntry(reader, entry, flagName.trimmed(), since, attributes);
     }
     return entry;
 }
@@ -1247,13 +1266,15 @@ ObjectTypeEntry *
                                      const QString &name, const QVersionNumber &since,
                                      QXmlStreamAttributes *attributes)
 {
-    auto *otype = new ObjectTypeEntry(name, since);
+    if (!checkRootElement())
+        return nullptr;
+    auto *otype = new ObjectTypeEntry(name, since, currentParentTypeEntry());
     applyCommonAttributes(otype, attributes);
     QString targetLangName = name;
     bool generate = true;
     for (int i = attributes->size() - 1; i >= 0; --i) {
         const QStringRef name = attributes->at(i).qualifiedName();
-        if (name == QLatin1String("target-lang-name")) {
+        if (name == targetLangNameAttribute()) {
             targetLangName = attributes->takeAt(i).value().toString();
         } else if (name == generateAttribute()) {
             generate = convertBoolean(attributes->takeAt(i).value(),
@@ -1261,8 +1282,9 @@ ObjectTypeEntry *
         }
     }
 
-    InterfaceTypeEntry *itype =
-        new InterfaceTypeEntry(InterfaceTypeEntry::interfaceName(targetLangName), since);
+    auto itype = new InterfaceTypeEntry(InterfaceTypeEntry::interfaceName(targetLangName),
+                                        since, currentParentTypeEntry());
+    itype->setTargetLangName(targetLangName);
 
     if (generate)
         itype->setCodeGeneration(m_generate);
@@ -1279,7 +1301,9 @@ NamespaceTypeEntry *
                                      const QString &name, const QVersionNumber &since,
                                      QXmlStreamAttributes *attributes)
 {
-    QScopedPointer<NamespaceTypeEntry> result(new NamespaceTypeEntry(name, since));
+    if (!checkRootElement())
+        return nullptr;
+    QScopedPointer<NamespaceTypeEntry> result(new NamespaceTypeEntry(name, since, currentParentTypeEntry()));
     applyCommonAttributes(result.data(), attributes);
     applyComplexTypeAttributes(reader, result.data(), attributes);
     for (int i = attributes->size() - 1; i >= 0; --i) {
@@ -1320,10 +1344,12 @@ ValueTypeEntry *
                                  const QString &name, const QVersionNumber &since,
                                  QXmlStreamAttributes *attributes)
 {
-    auto *typeEntry = new ValueTypeEntry(name, since);
+    if (!checkRootElement())
+        return nullptr;
+    auto *typeEntry = new ValueTypeEntry(name, since, currentParentTypeEntry());
     applyCommonAttributes(typeEntry, attributes);
     const int defaultCtIndex =
-        indexOfAttribute(*attributes, QStringViewLiteral("default-constructor"));
+        indexOfAttribute(*attributes, u"default-constructor");
     if (defaultCtIndex != -1)
          typeEntry->setDefaultConstructor(attributes->takeAt(defaultCtIndex).value().toString());
     return typeEntry;
@@ -1334,6 +1360,8 @@ FunctionTypeEntry *
                                     const QString &name, const QVersionNumber &since,
                                     QXmlStreamAttributes *attributes)
 {
+    if (!checkRootElement())
+        return nullptr;
     const int signatureIndex = indexOfAttribute(*attributes, signatureAttribute());
     if (signatureIndex == -1) {
         m_error =  msgMissingAttribute(signatureAttribute());
@@ -1345,7 +1373,7 @@ FunctionTypeEntry *
     TypeEntry *existingType = m_database->findType(name);
 
     if (!existingType) {
-        auto *result = new FunctionTypeEntry(name, signature, since);
+        auto *result = new FunctionTypeEntry(name, signature, since, currentParentTypeEntry());
         applyCommonAttributes(result, attributes);
         return result;
     }
@@ -1366,6 +1394,8 @@ TypedefEntry *
                             const QVersionNumber &since,
                             QXmlStreamAttributes *attributes)
 {
+    if (!checkRootElement())
+        return nullptr;
     if (m_current && m_current->type != StackElement::Root
         && m_current->type != StackElement::NamespaceTypeEntry) {
         m_error = QLatin1String("typedef entries must be nested in namespaces or type system.");
@@ -1377,7 +1407,7 @@ TypedefEntry *
         return nullptr;
     }
     const QString sourceType = attributes->takeAt(sourceIndex).value().toString();
-    auto result = new TypedefEntry(name, sourceType, since);
+    auto result = new TypedefEntry(name, sourceType, since, currentParentTypeEntry());
     applyCommonAttributes(result, attributes);
     return result;
 }
@@ -1407,7 +1437,7 @@ void TypeSystemParser::applyComplexTypeAttributes(const QXmlStreamReader &reader
                       qPrintable(msgUnimplementedAttributeWarning(reader, name)));
             const bool v = convertBoolean(attributes->takeAt(i).value(), genericClassAttribute(), false);
             ctype->setGenericClass(v);
-        } else if (name == QLatin1String("target-lang-name")) {
+        } else if (name == targetLangNameAttribute()) {
             ctype->setTargetLangName(attributes->takeAt(i).value().toString());
         } else if (name == QLatin1String("polymorphic-base")) {
             ctype->setPolymorphicIdValue(attributes->takeAt(i).value().toString());
@@ -1618,8 +1648,10 @@ TypeSystemTypeEntry *TypeSystemParser::parseRootElement(const QXmlStreamReader &
     auto *moduleEntry =
         const_cast<TypeSystemTypeEntry *>(m_database->findTypeSystemType(m_defaultPackage));
     const bool add = moduleEntry == nullptr;
-    if (add)
-        moduleEntry = new TypeSystemTypeEntry(m_defaultPackage, since);
+    if (add) {
+        moduleEntry = new TypeSystemTypeEntry(m_defaultPackage, since,
+                                              currentParentTypeEntry());
+    }
     moduleEntry->setCodeGeneration(m_generate);
 
     if ((m_generate == TypeEntry::GenerateForSubclass ||
@@ -1887,7 +1919,7 @@ bool TypeSystemParser::parseNoNullPointer(const QXmlStreamReader &reader,
     lastArgMod.noNullPointers = true;
 
     const int defaultValueIndex =
-        indexOfAttribute(*attributes, QStringViewLiteral("default-value"));
+        indexOfAttribute(*attributes, u"default-value");
     if (defaultValueIndex != -1) {
         const QXmlStreamAttribute attribute = attributes->takeAt(defaultValueIndex);
         qCWarning(lcShiboken, "%s",
@@ -2266,7 +2298,7 @@ bool TypeSystemParser::parseReplaceDefaultExpression(const QXmlStreamReader &,
         m_error = QLatin1String("Replace default expression only allowed as child of argument modification");
         return false;
     }
-    const int withIndex = indexOfAttribute(*attributes, QStringViewLiteral("with"));
+    const int withIndex = indexOfAttribute(*attributes, u"with");
     if (withIndex == -1 || attributes->at(withIndex).value().isEmpty()) {
         m_error = QLatin1String("Default expression replaced with empty string. Use remove-default-expression instead.");
         return false;
@@ -2630,6 +2662,12 @@ bool TypeSystemParser::startElement(const QXmlStreamReader &reader)
                 return false;
             }
         }
+        // Allow for primitive and/or std:: types only, else require proper nesting.
+        if (element->type != StackElement::PrimitiveTypeEntry && name.contains(QLatin1Char(':'))
+            && !name.contains(QLatin1String("std::"))) {
+            m_error = msgIncorrectlyNestedName(name);
+            return false;
+        }
 
         if (m_database->hasDroppedTypeEntries()) {
             QString identifier = getNamePrefix(element) + QLatin1Char('.');
@@ -2677,13 +2715,6 @@ bool TypeSystemParser::startElement(const QXmlStreamReader &reader)
             }
         }
 
-        // Fix type entry name using nesting information.
-        if (element->type & StackElement::TypeEntryMask
-            && element->parent && element->parent->type != StackElement::Root) {
-            name = element->parent->entry->name() + colonColon() + name;
-        }
-
-
         if (name.isEmpty()) {
             m_error = QLatin1String("no 'name' attribute specified");
             return false;
@@ -2691,7 +2722,9 @@ bool TypeSystemParser::startElement(const QXmlStreamReader &reader)
 
         switch (element->type) {
         case StackElement::CustomTypeEntry:
-            element->entry = new TypeEntry(name, TypeEntry::CustomType, since);
+            if (!checkRootElement())
+                return false;
+            element->entry = new TypeEntry(name, TypeEntry::CustomType, since, m_current->entry);
             break;
         case StackElement::PrimitiveTypeEntry:
             element->entry = parsePrimitiveTypeEntry(reader, name, since, &attributes);
@@ -2745,7 +2778,9 @@ bool TypeSystemParser::startElement(const QXmlStreamReader &reader)
                 return false;
             break;
         case StackElement::ObjectTypeEntry:
-            element->entry = new ObjectTypeEntry(name, since);
+            if (!checkRootElement())
+                return false;
+            element->entry = new ObjectTypeEntry(name, since, currentParentTypeEntry());
             applyCommonAttributes(element->entry, &attributes);
             applyComplexTypeAttributes(reader, static_cast<ComplexTypeEntry *>(element->entry), &attributes);
             break;

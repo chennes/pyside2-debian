@@ -89,6 +89,10 @@ def formatannotation(annotation, base_module=None):
 # break the Python license decorated files without an encoding line.
 
 # name used in signature.cpp
+def pyside_type_init(type_key, sig_strings):
+    return parser.pyside_type_init(type_key, sig_strings)
+
+# name used in signature.cpp
 def create_signature(props, key):
     return layout.create_signature(props, key)
 
@@ -99,6 +103,11 @@ def seterror_argument(args, func_name):
 # name used in signature.cpp
 def make_helptext(func):
     return errorhandler.make_helptext(func)
+
+# name used in signature.cpp
+def finish_import(module):
+    return importhandler.finish_import(module)
+
 
 import signature_bootstrap
 from shibokensupport import signature
@@ -185,6 +194,7 @@ def move_into_pyside_package():
     put_into_package(PySide2.support.signature, layout)
     put_into_package(PySide2.support.signature, lib)
     put_into_package(PySide2.support.signature, parser)
+    put_into_package(PySide2.support.signature, importhandler)
     put_into_package(PySide2.support.signature.lib, enum_sig)
 
     put_into_package(None if orig_typing else PySide2.support.signature, typing)
@@ -195,8 +205,8 @@ from shibokensupport.signature import errorhandler
 from shibokensupport.signature import layout
 from shibokensupport.signature import lib
 from shibokensupport.signature import parser
+from shibokensupport.signature import importhandler
 from shibokensupport.signature.lib import enum_sig
-from shibokensupport.signature.parser import pyside_type_init
 
 if "PySide2" in sys.modules:
     # We publish everything under "PySide2.support.signature", again.

@@ -539,9 +539,6 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
                     cls->addDefaultCopyConstructor(ancestorHasPrivateCopyConstructor(cls));
             }
         }
-
-        if (cls->isAbstract() && !cls->isInterface())
-            cls->typeEntry()->setLookupName(cls->typeEntry()->targetLangName() + QLatin1String("$ConcreteWrapper"));
     }
     const auto &allEntries = types->entries();
 
@@ -584,7 +581,7 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
                 AbstractMetaClass *cls = AbstractMetaClass::findClass(m_metaClasses, name);
 
                 const bool enumFound = cls
-                    ? cls->findEnum(entry->targetLangName()) != nullptr
+                    ? cls->findEnum(entry->targetLangEntryName()) != nullptr
                     : m_enums.contains(entry);
 
                 if (!enumFound) {
@@ -836,13 +833,10 @@ AbstractMetaEnum *AbstractMetaBuilderPrivate::traverseEnum(const EnumModelItem &
     QString qualifiedName = enumItem->qualifiedName().join(colonColon());
 
     TypeEntry *typeEntry = nullptr;
+    const TypeEntry *enclosingTypeEntry = enclosing ? enclosing->typeEntry() : nullptr;
     if (enumItem->accessPolicy() == CodeModel::Private) {
-        QStringList names = enumItem->qualifiedName();
-        const QString &enumName = names.constLast();
-        QString nspace;
-        if (names.size() > 1)
-            nspace = QStringList(names.mid(0, names.size() - 1)).join(colonColon());
-        typeEntry = new EnumTypeEntry(nspace, enumName, QVersionNumber(0, 0));
+        typeEntry = new EnumTypeEntry(enumItem->qualifiedName().constLast(),
+                                      QVersionNumber(0, 0), enclosingTypeEntry);
         TypeDatabase::instance()->addType(typeEntry);
     } else if (enumItem->enumKind() != AnonymousEnum) {
         typeEntry = TypeDatabase::instance()->findType(qualifiedName);
@@ -862,8 +856,8 @@ AbstractMetaEnum *AbstractMetaBuilderPrivate::traverseEnum(const EnumModelItem &
     QString enumName = enumItem->name();
 
     QString className;
-    if (enclosing)
-        className = enclosing->typeEntry()->qualifiedCppName();
+    if (enclosingTypeEntry)
+        className = enclosingTypeEntry->qualifiedCppName();
 
     QString rejectReason;
     if (TypeDatabase::instance()->isEnumRejected(className, enumName, &rejectReason)) {
@@ -945,25 +939,13 @@ AbstractMetaEnum *AbstractMetaBuilderPrivate::traverseEnum(const EnumModelItem &
     metaEnum->setOriginalAttributes(metaEnum->attributes());
 
     // Register all enum values on Type database
-    QString prefix;
-    if (enclosing) {
-        prefix += enclosing->typeEntry()->qualifiedCppName();
-        prefix += colonColon();
-    }
-    if (enumItem->enumKind() == EnumClass) {
-        prefix += enumItem->name();
-        prefix += colonColon();
-    }
+    const bool isScopedEnum = enumItem->enumKind() == EnumClass;
     const EnumeratorList &enumerators = enumItem->enumerators();
     for (const EnumeratorModelItem &e : enumerators) {
-        QString name;
-        if (enclosing) {
-            name += enclosing->name();
-            name += colonColon();
-        }
-        EnumValueTypeEntry *enumValue =
-            new EnumValueTypeEntry(prefix + e->name(), e->stringValue(),
-                                   enumTypeEntry, enumTypeEntry->version());
+        auto enumValue =
+            new EnumValueTypeEntry(e->name(), e->stringValue(),
+                                   enumTypeEntry, isScopedEnum,
+                                   enumTypeEntry->version());
         TypeDatabase::instance()->addType(enumValue);
         if (e->value().isNullValue())
             enumTypeEntry->setNullValue(enumValue);
@@ -1097,9 +1079,11 @@ AbstractMetaClass *AbstractMetaBuilderPrivate::traverseClass(const FileModelItem
     TemplateParameterList template_parameters = classItem->templateParameters();
     QVector<TypeEntry *> template_args;
     template_args.clear();
+    auto argumentParent = metaClass->typeEntry()->typeSystemTypeEntry();
     for (int i = 0; i < template_parameters.size(); ++i) {
         const TemplateParameterModelItem &param = template_parameters.at(i);
-        TemplateArgumentEntry *param_type = new TemplateArgumentEntry(param->name(), type->version());
+        auto param_type = new TemplateArgumentEntry(param->name(), type->version(),
+                                                    argumentParent);
         param_type->setOrdinal(i);
         template_args.append(param_type);
     }
@@ -1300,27 +1284,37 @@ void AbstractMetaBuilderPrivate::fixReturnTypeOfConversionOperator(AbstractMetaF
     metaFunction->replaceType(metaType);
 }
 
-static bool _compareAbstractMetaTypes(const AbstractMetaType *type, const AbstractMetaType *other)
+static bool _compareAbstractMetaTypes(const AbstractMetaType *type,
+                                      const AbstractMetaType *other,
+                                      AbstractMetaType::ComparisonFlags flags = {})
 {
     return (type != nullptr) == (other != nullptr)
-        && (type == nullptr || *type == *other);
+        && (type == nullptr || type->compare(*other, flags));
 }
 
-static bool _compareAbstractMetaFunctions(const AbstractMetaFunction *func, const AbstractMetaFunction *other)
+static bool _compareAbstractMetaFunctions(const AbstractMetaFunction *func,
+                                          const AbstractMetaFunction *other,
+                                          AbstractMetaType::ComparisonFlags argumentFlags = {})
 {
     if (!func && !other)
         return true;
     if (!func || !other)
         return false;
-    if (func->arguments().count() != other->arguments().count()
+    if (func->name() != other->name())
+        return false;
+    const int argumentsCount = func->arguments().count();
+    if (argumentsCount != other->arguments().count()
         || func->isConstant() != other->isConstant()
         || func->isStatic() != other->isStatic()
         || !_compareAbstractMetaTypes(func->type(), other->type())) {
         return false;
     }
-    for (int i = 0; i < func->arguments().count(); ++i) {
-        if (!_compareAbstractMetaTypes(func->arguments().at(i)->type(), other->arguments().at(i)->type()))
+    for (int i = 0; i < argumentsCount; ++i) {
+        if (!_compareAbstractMetaTypes(func->arguments().at(i)->type(),
+                                       other->arguments().at(i)->type(),
+                                       argumentFlags)) {
             return false;
+        }
     }
     return true;
 }
@@ -1345,29 +1339,6 @@ AbstractMetaFunctionList AbstractMetaBuilderPrivate::classFunctionList(const Sco
     }
     return result;
 }
-
-// For template classes, entries with more specific types may exist from out-of-
-// line definitions. If there is a declaration which matches it after fixing
-// the parameters, remove it as duplicate. For example:
-// template class<T> Vector { public:
-//     Vector(const Vector &rhs);
-// };
-// template class<T>
-// Vector<T>::Vector(const Vector<T>&) {} // More specific, remove declaration.
-
-class DuplicatingFunctionPredicate : public std::unary_function<bool, const AbstractMetaFunction *> {
-public:
-    explicit DuplicatingFunctionPredicate(const AbstractMetaFunction *f) : m_function(f) {}
-
-    bool operator()(const AbstractMetaFunction *rhs) const
-    {
-        return rhs != m_function && rhs->name() == m_function->name()
-            && _compareAbstractMetaFunctions(m_function, rhs);
-    }
-
-private:
-    const AbstractMetaFunction *m_function;
-};
 
 void AbstractMetaBuilderPrivate::traverseFunctions(ScopeModelItem scopeItem,
                                                    AbstractMetaClass *metaClass)
@@ -1416,13 +1387,6 @@ void AbstractMetaBuilderPrivate::traverseFunctions(ScopeModelItem scopeItem,
         } else if (metaFunction->isConstructor() && !metaFunction->isPrivate()) {
             *metaClass -= AbstractMetaAttributes::FinalInTargetLang;
             metaClass->setHasNonPrivateConstructor(true);
-        }
-
-        // Classes with virtual destructors should always have a shell class
-        // (since we aren't registering the destructors, we need this extra check)
-        if (metaFunction->isDestructor() && metaFunction->isVirtual()
-            && metaFunction->visibility() != AbstractMetaAttributes::Private) {
-            metaClass->setForceShellClass(true);
         }
 
         if (!metaFunction->isDestructor()
@@ -1607,11 +1571,36 @@ void AbstractMetaBuilderPrivate::traverseEnums(const ScopeModelItem &scopeItem,
                                                const QStringList &enumsDeclarations)
 {
     const EnumList &enums = scopeItem->enums();
+#if QT_VERSION >= 0x050E00
+    const QSet<QString> enumsDeclarationSet(enumsDeclarations.cbegin(), enumsDeclarations.cend());
+#else
+    const QSet<QString> enumsDeclarationSet = QSet<QString>::fromList(enumsDeclarations);
+#endif
     for (const EnumModelItem &enumItem : enums) {
-        AbstractMetaEnum* metaEnum = traverseEnum(enumItem, metaClass, QSet<QString>::fromList(enumsDeclarations));
+        AbstractMetaEnum* metaEnum = traverseEnum(enumItem, metaClass, enumsDeclarationSet);
         if (metaEnum) {
             metaClass->addEnum(metaEnum);
             metaEnum->setEnclosingClass(metaClass);
+        }
+    }
+}
+
+static void applyDefaultExpressionModifications(const FunctionModificationList &functionMods,
+                                                int i, AbstractMetaArgument *metaArg)
+{
+    // use replace/remove-default-expression for set default value
+    for (const auto &modification : functionMods) {
+        for (const auto &argumentModification : modification.argument_mods) {
+            if (argumentModification.index == i + 1) {
+                if (argumentModification.removedDefaultExpression) {
+                    metaArg->setDefaultValueExpression(QString());
+                    break;
+                }
+                if (!argumentModification.replacedDefaultExpression.isEmpty()) {
+                    metaArg->setDefaultValueExpression(argumentModification.replacedDefaultExpression);
+                    break;
+                }
+            }
         }
     }
 }
@@ -1674,20 +1663,13 @@ AbstractMetaFunction* AbstractMetaBuilderPrivate::traverseFunction(const AddedFu
 
 
     // Find the correct default values
+    const FunctionModificationList functionMods = metaFunction->modifications(metaClass);
     for (int i = 0; i < metaArguments.size(); ++i) {
         AbstractMetaArgument* metaArg = metaArguments.at(i);
 
-        //use relace-default-expression for set default value
-        QString replacedExpression;
-        if (metaClass)
-            replacedExpression = metaFunction->replacedDefaultExpression(metaClass, i + 1);
-
-        if (!replacedExpression.isEmpty()) {
-            if (!metaFunction->removedDefaultExpression(metaClass, i + 1)) {
-                metaArg->setDefaultValueExpression(replacedExpression);
-                metaArg->setOriginalDefaultValueExpression(replacedExpression);
-            }
-        }
+        // use replace-default-expression for set default value
+        applyDefaultExpressionModifications(functionMods, i, metaArg);
+        metaArg->setOriginalDefaultValueExpression(metaArg->defaultValueExpression()); // appear unmodified
     }
 
     metaFunction->setOriginalAttributes(metaFunction->attributes());
@@ -1919,7 +1901,7 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
 
         AbstractMetaType *type = nullptr;
         if (!returnType.isVoid()) {
-            type = translateType(returnType, currentClass, true, &errorMessage);
+            type = translateType(returnType, currentClass, {}, &errorMessage);
             if (!type) {
                 const QString reason = msgUnmatchedReturnType(functionItem, errorMessage);
                 qCWarning(lcShiboken, "%s",
@@ -1955,7 +1937,7 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
             return nullptr;
         }
 
-        AbstractMetaType *metaType = translateType(arg->type(), currentClass, true, &errorMessage);
+        AbstractMetaType *metaType = translateType(arg->type(), currentClass, {}, &errorMessage);
         if (!metaType) {
             // If an invalid argument has a default value, simply remove it
             if (arg->defaultValue()) {
@@ -2006,35 +1988,16 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
         const ArgumentModelItem &arg = arguments.at(i);
         AbstractMetaArgument* metaArg = metaArguments.at(i);
 
-        //use relace-default-expression for set default value
-        QString replacedExpression;
-        if (currentClass) {
-            replacedExpression = metaFunction->replacedDefaultExpression(currentClass, i + 1);
-        } else {
-            if (!functionMods.isEmpty()) {
-                QVector<ArgumentModification> argMods = functionMods.constFirst().argument_mods;
-                if (!argMods.isEmpty())
-                    replacedExpression = argMods.constFirst().replacedDefaultExpression;
-            }
-        }
+        const QString originalDefaultExpression =
+            fixDefaultValue(arg, metaArg->type(), metaFunction, currentClass, i);
 
-        bool hasDefaultValue = false;
-        if (arg->defaultValue() || !replacedExpression.isEmpty()) {
-            QString expr = arg->defaultValueExpression();
-            expr = fixDefaultValue(arg, metaArg->type(), metaFunction, currentClass, i);
-            metaArg->setOriginalDefaultValueExpression(expr);
+        metaArg->setOriginalDefaultValueExpression(originalDefaultExpression);
+        metaArg->setDefaultValueExpression(originalDefaultExpression);
 
-            if (metaFunction->removedDefaultExpression(currentClass, i + 1)) {
-                expr.clear();
-            } else if (!replacedExpression.isEmpty()) {
-                expr = replacedExpression;
-            }
-            metaArg->setDefaultValueExpression(expr);
-            hasDefaultValue = !expr.isEmpty();
-        }
+        applyDefaultExpressionModifications(functionMods, i, metaArg);
 
         //Check for missing argument name
-        if (hasDefaultValue
+        if (!metaArg->defaultValueExpression().isEmpty()
             && !metaArg->hasName()
             && !metaFunction->isOperatorOverload()
             && !metaFunction->isSignal()
@@ -2159,22 +2122,27 @@ static const TypeEntry* findTypeEntryUsingContext(const AbstractMetaClass* metaC
 
 AbstractMetaType *AbstractMetaBuilderPrivate::translateType(const TypeInfo &_typei,
                                                             AbstractMetaClass *currentClass,
-                                                            bool resolveType,
+                                                            TranslateTypeFlags flags,
                                                             QString *errorMessage)
 {
-    return translateTypeStatic(_typei, currentClass, this, resolveType, errorMessage);
+    return translateTypeStatic(_typei, currentClass, this, flags, errorMessage);
 }
 
 AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo &_typei,
                                                                   AbstractMetaClass *currentClass,
                                                                   AbstractMetaBuilderPrivate *d,
-                                                                  bool resolveType,
+                                                                  TranslateTypeFlags flags,
                                                                   QString *errorMessageIn)
 {
     // 1. Test the type info without resolving typedefs in case this is present in the
     //    type system
+    const bool resolveType = !flags.testFlag(AbstractMetaBuilder::DontResolveType);
     if (resolveType) {
-        if (AbstractMetaType *resolved = translateTypeStatic(_typei, currentClass, d, false, errorMessageIn))
+        AbstractMetaType *resolved =
+            translateTypeStatic(_typei, currentClass, d,
+                                flags | AbstractMetaBuilder::DontResolveType,
+                                errorMessageIn);
+        if (resolved)
             return resolved;
     }
 
@@ -2233,7 +2201,7 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo
         newInfo.setReferenceType(typeInfo.referenceType());
         newInfo.setVolatile(typeInfo.isVolatile());
 
-        AbstractMetaType *elementType = translateTypeStatic(newInfo, currentClass, d, true, &errorMessage);
+        AbstractMetaType *elementType = translateTypeStatic(newInfo, currentClass, d, flags, &errorMessage);
         if (!elementType) {
             if (errorMessageIn) {
                 errorMessage.prepend(QLatin1String("Unable to translate array element: "));
@@ -2254,7 +2222,9 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo
                 if (_ok)
                     arrayType->setArrayElementCount(int(elems));
             }
-            arrayType->setTypeEntry(new ArrayTypeEntry(elementType->typeEntry() , elementType->typeEntry()->version()));
+            auto elementTypeEntry = elementType->typeEntry();
+            arrayType->setTypeEntry(new ArrayTypeEntry(elementTypeEntry, elementTypeEntry->version(),
+                                                       elementTypeEntry->parent()));
             arrayType->decideUsagePattern();
 
             elementType = arrayType;
@@ -2344,7 +2314,7 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo
     const auto &templateArguments = typeInfo.instantiations();
     for (int t = 0, size = templateArguments.size(); t < size; ++t) {
         const  TypeInfo &ti = templateArguments.at(t);
-        AbstractMetaType *targType = translateTypeStatic(ti, currentClass, d, true, &errorMessage);
+        AbstractMetaType *targType = translateTypeStatic(ti, currentClass, d, flags, &errorMessage);
         if (!targType) {
             if (errorMessageIn)
                 *errorMessageIn = msgCannotTranslateTemplateArgument(t, ti, errorMessage);
@@ -2366,17 +2336,17 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo
 
 AbstractMetaType *AbstractMetaBuilder::translateType(const TypeInfo &_typei,
                                                      AbstractMetaClass *currentClass,
-                                                     bool resolveType,
+                                                     TranslateTypeFlags flags,
                                                      QString *errorMessage)
 {
     return AbstractMetaBuilderPrivate::translateTypeStatic(_typei, currentClass,
-                                                           nullptr, resolveType,
+                                                           nullptr, flags,
                                                            errorMessage);
 }
 
 AbstractMetaType *AbstractMetaBuilder::translateType(const QString &t,
                                                      AbstractMetaClass *currentClass,
-                                                     bool resolveType,
+                                                     TranslateTypeFlags flags,
                                                      QString *errorMessageIn)
 {
     QString errorMessage;
@@ -2389,7 +2359,7 @@ AbstractMetaType *AbstractMetaBuilder::translateType(const QString &t,
             qCWarning(lcShiboken, "%s", qPrintable(errorMessage));
         return nullptr;
     }
-    return translateType(typeInfo, currentClass, resolveType, errorMessageIn);
+    return translateType(typeInfo, currentClass, flags, errorMessageIn);
 }
 
 qint64 AbstractMetaBuilderPrivate::findOutValueFromString(const QString &stringValue, bool &ok)
@@ -2435,10 +2405,10 @@ QString AbstractMetaBuilderPrivate::fixDefaultValue(const ArgumentModelItem &ite
                                                     AbstractMetaClass *implementingClass,
                                                     int /* argumentIndex */)
 {
-    QString functionName = fnc->name();
-    QString className = implementingClass ? implementingClass->qualifiedCppName() : QString();
-
     QString expr = item->defaultValueExpression();
+    if (expr.isEmpty())
+        return expr;
+
     if (type) {
         if (type->isPrimitive()) {
             if (type->name() == QLatin1String("boolean")) {
@@ -2512,11 +2482,12 @@ QString AbstractMetaBuilderPrivate::fixDefaultValue(const ArgumentModelItem &ite
             }
         }
     } else {
+        const QString className = implementingClass ? implementingClass->qualifiedCppName() : QString();
         qCWarning(lcShiboken).noquote().nospace()
             << QStringLiteral("undefined type for default value '%3' of argument in function '%1', class '%2'")
-                              .arg(functionName, className, item->defaultValueExpression());
+                              .arg(fnc->name(), className, item->defaultValueExpression());
 
-        expr = QString();
+        expr.clear();
     }
 
     return expr;
@@ -2676,8 +2647,7 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
         if (isNumber) {
             t = typeDb->findType(typeName);
             if (!t) {
-                t = new EnumValueTypeEntry(typeName, typeName, nullptr,
-                                           QVersionNumber(0, 0));
+                t = new ConstantValueTypeEntry(typeName, subclass->typeEntry()->typeSystemTypeEntry());
                 t->setCodeGeneration(0);
                 typeDb->addType(t);
             }

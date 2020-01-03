@@ -40,6 +40,7 @@
 #include <sbkpython.h>
 #include "pysidesignal.h"
 #include "pysidesignal_p.h"
+#include "pysidestaticstrings.h"
 #include "signalmanager.h"
 
 #include <shiboken.h>
@@ -109,7 +110,7 @@ static PyType_Slot PySideMetaSignalType_slots[] = {
     {Py_tp_methods, (void *)MetaSignal_methods},
     {Py_tp_base, (void *)&PyType_Type},
     {Py_tp_free, (void *)PyObject_GC_Del},
-    {Py_tp_dealloc, (void *)object_dealloc},
+    {Py_tp_dealloc, (void *)Sbk_object_dealloc},
     {0, 0}
 };
 static PyType_Spec PySideMetaSignalType_spec = {
@@ -141,7 +142,7 @@ static PyType_Slot PySideSignalType_slots[] = {
     {Py_tp_init, (void *)signalTpInit},
     {Py_tp_new, (void *)PyType_GenericNew},
     {Py_tp_free, (void *)signalFree},
-    {Py_tp_dealloc, (void *)object_dealloc},
+    {Py_tp_dealloc, (void *)Sbk_object_dealloc},
     {0, 0}
 };
 static PyType_Spec PySideSignalType_spec = {
@@ -180,7 +181,7 @@ static PyType_Slot PySideSignalInstanceType_slots[] = {
     {Py_tp_methods, (void *)SignalInstance_methods},
     {Py_tp_new, (void *)PyType_GenericNew},
     {Py_tp_free, (void *)signalInstanceFree},
-    {Py_tp_dealloc, (void *)object_dealloc},
+    {Py_tp_dealloc, (void *)Sbk_object_dealloc},
     {0, 0}
 };
 static PyType_Spec PySideSignalInstanceType_spec = {
@@ -412,7 +413,8 @@ PyObject *signalInstanceConnect(PyObject *self, PyObject *args, PyObject *kwds)
 
     if (match) {
         Shiboken::AutoDecRef tupleArgs(PyList_AsTuple(pyArgs));
-        Shiboken::AutoDecRef pyMethod(PyObject_GetAttrString(source->d->source, "connect"));
+        Shiboken::AutoDecRef pyMethod(PyObject_GetAttr(source->d->source,
+                                                       PySide::PyName::qtConnect()));
         if (pyMethod.isNull()) { // PYSIDE-79: check if pyMethod exists.
             PyErr_SetString(PyExc_RuntimeError, "method 'connect' vanished!");
             return 0;
@@ -465,7 +467,8 @@ PyObject *signalInstanceEmit(PyObject *self, PyObject *args)
     for (Py_ssize_t i = 0, max = PyTuple_Size(args); i < max; i++)
         PyList_Append(pyArgs, PyTuple_GetItem(args, i));
 
-    Shiboken::AutoDecRef pyMethod(PyObject_GetAttrString(source->d->source, "emit"));
+    Shiboken::AutoDecRef pyMethod(PyObject_GetAttr(source->d->source,
+                                                   PySide::PyName::qtEmit()));
 
     Shiboken::AutoDecRef tupleArgs(PyList_AsTuple(pyArgs));
     return PyObject_CallObject(pyMethod, tupleArgs);
@@ -530,7 +533,8 @@ PyObject *signalInstanceDisconnect(PyObject *self, PyObject *args)
 
     if (match) {
         Shiboken::AutoDecRef tupleArgs(PyList_AsTuple(pyArgs));
-        Shiboken::AutoDecRef pyMethod(PyObject_GetAttrString(source->d->source, "disconnect"));
+        Shiboken::AutoDecRef pyMethod(PyObject_GetAttr(source->d->source,
+                                                       PySide::PyName::qtDisconnect()));
         PyObject *result = PyObject_CallObject(pyMethod, tupleArgs);
         if (!result || result == Py_True)
             return result;
@@ -615,7 +619,7 @@ void init(PyObject *module)
 {
     if (SbkSpecial_Type_Ready(module, PySideMetaSignalTypeF(), MetaSignal_SignatureStrings) < 0)
         return;
-    Py_INCREF(PySideSignalTypeF());
+    Py_INCREF(PySideMetaSignalTypeF());
     PyModule_AddObject(module, "MetaSignal", reinterpret_cast<PyObject *>(PySideMetaSignalTypeF()));
 
     if (SbkSpecial_Type_Ready(module, PySideSignalTypeF(), Signal_SignatureStrings) < 0)
@@ -756,7 +760,8 @@ void instanceInitialize(PySideSignalInstance *self, PyObject *name, PySideSignal
 
 bool connect(PyObject *source, const char *signal, PyObject *callback)
 {
-    Shiboken::AutoDecRef pyMethod(PyObject_GetAttrString(source, "connect"));
+    Shiboken::AutoDecRef pyMethod(PyObject_GetAttr(source,
+                                                   PySide::PyName::qtConnect()));
     if (pyMethod.isNull())
         return false;
 

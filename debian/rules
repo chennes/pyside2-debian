@@ -23,6 +23,9 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 # Add CPPFLAGS to CXXFLAGS as CMake ignores CPPFLAGS by default
 CXXFLAGS+=$(CPPFLAGS)
 
+# Work around buildd bug (https://bugs.debian.org/842565)
+undefine XDG_RUNTIME_DIR
+
 %:
 	dh $@ --with python3,sphinxdoc --buildsystem=pybuild
 

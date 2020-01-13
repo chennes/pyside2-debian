@@ -1,5 +1,6 @@
-pyside2 (5.14.0-1) UNRELEASED; urgency=medium
+pyside2 (5.14.0-1~exp1) experimental; urgency=medium
 
+  [ Raphaël Hertzog ]
   * Team upload
   * New upstream version 5.14.0. Closes: #945376, #947101
   * Update patches (3 dropped, one new for Qt 5.12 compat)
@@ -7,8 +8,14 @@ pyside2 (5.14.0-1) UNRELEASED; urgency=medium
   * Update package names for version 5.14
   * Drop python3-pyside2uic, there's no such library anymore
   * Re-enable tests failing due to broken XDG_RUNTIME_DIR
+  * Drop package prefix from lintian overrides
+  * Drop removed file from debian/copyright
 
- -- Raphaël Hertzog <raphael@freexian.com>  Fri, 03 Jan 2020 20:27:24 +0100
+  [ Kurt Kremitzki ]
+  * Add CMake sed for pyside2 include path
+  * Add CMake sed for multi-Python version support
+
+ -- Kurt Kremitzki <kurt@kwk.systems>  Mon, 13 Jan 2020 00:10:14 -0600
 
 pyside2 (5.13.2-2.2) unstable; urgency=medium
 

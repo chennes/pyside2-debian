@@ -10,6 +10,8 @@ pyside2 (5.14.0-1~exp1) experimental; urgency=medium
   * Re-enable tests failing due to broken XDG_RUNTIME_DIR
   * Drop package prefix from lintian overrides
   * Drop removed file from debian/copyright
+  * Fix arch-all build on 32 bit arches. Closes: #948764
+    Thanks to peter green <plugwash@p10link.net> for the patch.
 
   [ Kurt Kremitzki ]
   * Add CMake sed for pyside2 include path

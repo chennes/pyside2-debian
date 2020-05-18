@@ -53,6 +53,7 @@ Build-Depends: chrpath,
                qttools5-dev,
                qtwebengine5-dev [amd64 arm64 armhf i386 mipsel],
 #for tests
+               python3-distro,
 	       qml-module-qtquick2,
 	       qml-module-qtquick-layouts,
 	       qml-module-qtquick-controls,

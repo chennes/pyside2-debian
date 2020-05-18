@@ -4,7 +4,8 @@ Priority: optional
 Maintainer: Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>
 Uploaders: Sophie Brun <sophie@freexian.com>,
            Raphaël Hertzog <hertzog@debian.org>,
-	   Sebastien Delafond <seb@debian.org>
+	   Sebastien Delafond <seb@debian.org>,
+           Kurt Kremitzki <kurt@kwk.systems>
 Build-Depends: chrpath,
                cmake (>= 3.1),
                debhelper-compat (= 12),

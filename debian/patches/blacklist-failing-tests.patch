@@ -22,7 +22,7 @@ index adcf520..710d506 100644
  [QtGui::qmatrix_test]
      win32
  [QtWidgets::bug_576]
-@@ -88,6 +91,9 @@
+@@ -86,6 +89,9 @@
      win32
      linux
      darwin

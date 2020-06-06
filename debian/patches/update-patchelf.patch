@@ -34,7 +34,7 @@ diff --git a/build_scripts/main.py b/build_scripts/main.py
 index 674048e..e638724 100644
 --- a/build_scripts/main.py
 +++ b/build_scripts/main.py
-@@ -865,7 +865,18 @@ class PysideBuild(_build):
+@@ -873,7 +873,18 @@ class PysideBuild(_build):
              return
          log.info("Building patchelf...")
          module_src_dir = os.path.join(self.sources_dir, "patchelf")

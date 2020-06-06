@@ -228,7 +228,7 @@ struct ArgumentModification
 
 struct Modification
 {
-    enum Modifiers {
+    enum Modifiers : uint {
         InvalidModifier =       0x0000,
         Private =               0x0001,
         Protected =             0x0002,
@@ -499,7 +499,6 @@ QDebug operator<<(QDebug d, const AddedFunction::Argument &a);
 QDebug operator<<(QDebug d, const AddedFunction &af);
 #endif
 
-class InterfaceTypeEntry;
 class ObjectTypeEntry;
 
 class DocModification
@@ -562,20 +561,13 @@ public:
         EnumValue,
         ConstantValueType,
         TemplateArgumentType,
-        ThreadType,
         BasicValueType,
-        StringType,
         ContainerType,
-        InterfaceType,
         ObjectType,
         NamespaceType,
-        VariantType,
-        JObjectWrapperType,
-        CharType,
         ArrayType,
         TypeSystemType,
         CustomType,
-        TargetLangType,
         FunctionType,
         SmartPointerType,
         TypedefType
@@ -605,7 +597,10 @@ public:
 
     const TypeEntry *parent() const { return m_parent; }
     void setParent(const TypeEntry *p) { m_parent = p; }
+    bool isChildOf(const TypeEntry *p) const;
     const TypeSystemTypeEntry *typeSystemTypeEntry() const;
+    // cf AbstractMetaClass::targetLangEnclosingClass()
+    const TypeEntry *targetLangEnclosingEntry() const;
 
     bool isPrimitive() const
     {
@@ -619,21 +614,9 @@ public:
     {
         return m_type == FlagsType;
     }
-    bool isInterface() const
-    {
-        return m_type == InterfaceType;
-    }
     bool isObject() const
     {
         return m_type == ObjectType;
-    }
-    bool isString() const
-    {
-        return m_type == StringType;
-    }
-    bool isChar() const
-    {
-        return m_type == CharType;
     }
     bool isNamespace() const
     {
@@ -646,14 +629,6 @@ public:
     bool isSmartPointer() const
     {
         return m_type == SmartPointerType;
-    }
-    bool isVariant() const
-    {
-        return m_type == VariantType;
-    }
-    bool isJObjectWrapper() const
-    {
-        return m_type == JObjectWrapperType;
     }
     bool isArray() const
     {
@@ -671,17 +646,9 @@ public:
     {
         return m_type == VarargsType;
     }
-    bool isThread() const
-    {
-        return m_type == ThreadType;
-    }
     bool isCustom() const
     {
         return m_type == CustomType;
-    }
-    bool isBasicValue() const
-    {
-        return m_type == BasicValueType;
     }
     bool isTypeSystem() const
     {
@@ -708,6 +675,8 @@ public:
 
     // The type's name in C++, fully qualified
     QString name() const { return m_name; }
+    // C++ excluding inline namespaces
+    QString shortName() const;
     // Name as specified in XML
     QString entryName() const { return m_entryName; }
 
@@ -766,11 +735,6 @@ public:
 
     QString qualifiedTargetLangName() const;
 
-    virtual InterfaceTypeEntry *designatedInterface() const
-    {
-        return nullptr;
-    }
-
     void setCustomConstructor(const CustomFunction &func)
     {
         m_customConstructor = func;
@@ -794,11 +758,6 @@ public:
         return false;
     }
     virtual bool isComplex() const
-    {
-        return false;
-    }
-
-    virtual bool isNativeIdBased() const
     {
         return false;
     }
@@ -896,7 +855,8 @@ protected:
 
 private:
     const TypeEntry *m_parent;
-    QString m_name; // fully qualified
+    QString m_name; // C++ fully qualified
+    mutable QString m_cachedShortName; // C++ excluding inline namespaces
     QString m_entryName;
     QString m_targetLangPackage;
     mutable QString m_cachedTargetLangName; // "Foo.Bar"
@@ -1446,7 +1406,7 @@ class ContainerTypeEntry : public ComplexTypeEntry
 {
     Q_GADGET
 public:
-    enum Type {
+    enum ContainerKind {
         NoContainer,
         ListContainer,
         StringListContainer,
@@ -1461,14 +1421,14 @@ public:
         MultiHashContainer,
         PairContainer,
     };
-    Q_ENUM(Type)
+    Q_ENUM(ContainerKind)
 
-    explicit ContainerTypeEntry(const QString &entryName, Type type, const QVersionNumber &vr,
-                                const TypeEntry *parent);
+    explicit ContainerTypeEntry(const QString &entryName, ContainerKind containerKind,
+                                const QVersionNumber &vr, const TypeEntry *parent);
 
-    Type type() const
+    ContainerKind containerKind() const
     {
-        return m_type;
+        return m_containerKind;
     }
 
     QString typeName() const;
@@ -1483,12 +1443,14 @@ protected:
     ContainerTypeEntry(const ContainerTypeEntry &);
 
 private:
-    Type m_type;
+    ContainerKind m_containerKind;
 };
 
 class SmartPointerTypeEntry : public ComplexTypeEntry
 {
 public:
+    using Instantiations = QVector<const TypeEntry *>;
+
     explicit SmartPointerTypeEntry(const QString &entryName,
                                    const QString &getterName,
                                    const QString &smartPointerType,
@@ -1508,6 +1470,13 @@ public:
 
     TypeEntry *clone() const override;
 
+    Instantiations instantiations() const { return m_instantiations; }
+    void setInstantiations(const Instantiations &i) { m_instantiations = i; }
+    bool matchesInstantiation(const TypeEntry *e) const;
+
+#ifndef QT_NO_DEBUG_STREAM
+    void formatDebug(QDebug &d) const override;
+#endif
 protected:
     SmartPointerTypeEntry(const SmartPointerTypeEntry &);
 
@@ -1515,6 +1484,7 @@ private:
     QString m_getterName;
     QString m_smartPointerType;
     QString m_refCountMethodName;
+    Instantiations m_instantiations;
 };
 
 class NamespaceTypeEntry : public ComplexTypeEntry
@@ -1535,6 +1505,15 @@ public:
 
     bool matchesFile(const QString &needle) const;
 
+    bool isVisible() const;
+    void setVisibility(TypeSystem::Visibility v) { m_visibility = v; }
+
+    // C++ 11 inline namespace, from code model
+    bool isInlineNamespace() const { return m_inlineNamespace; }
+    void setInlineNamespace(bool i) { m_inlineNamespace = i; }
+
+    static bool isVisibleScope(const TypeEntry *e);
+
 #ifndef QT_NO_DEBUG_STREAM
     void formatDebug(QDebug &d) const override;
 #endif
@@ -1545,7 +1524,9 @@ protected:
 private:
     QRegularExpression m_filePattern;
     const NamespaceTypeEntry *m_extends = nullptr;
+    TypeSystem::Visibility m_visibility = TypeSystem::Visibility::Auto;
     bool m_hasPattern = false;
+    bool m_inlineNamespace = false;
 };
 
 class ValueTypeEntry : public ComplexTypeEntry
@@ -1556,8 +1537,6 @@ public:
 
     bool isValue() const override;
 
-    bool isNativeIdBased() const override;
-
     TypeEntry *clone() const override;
 
 protected:
@@ -1565,39 +1544,6 @@ protected:
                             const TypeEntry *parent);
     ValueTypeEntry(const ValueTypeEntry &);
 };
-
-class InterfaceTypeEntry : public ComplexTypeEntry
-{
-public:
-    explicit InterfaceTypeEntry(const QString &entryName, const QVersionNumber &vr,
-                                const TypeEntry *parent);
-
-    static QString interfaceName(const QString &name)
-    {
-        return name + QLatin1String("Interface");
-    }
-
-    ObjectTypeEntry *origin() const
-    {
-        return m_origin;
-    }
-    void setOrigin(ObjectTypeEntry *origin)
-    {
-        m_origin = origin;
-    }
-
-    bool isNativeIdBased() const override;
-    QString qualifiedCppName() const override;
-
-    TypeEntry *clone() const override;
-
-protected:
-    InterfaceTypeEntry(const InterfaceTypeEntry &);
-
-private:
-    ObjectTypeEntry *m_origin = nullptr;
-};
-
 
 class FunctionTypeEntry : public TypeEntry
 {
@@ -1635,21 +1581,10 @@ public:
     explicit ObjectTypeEntry(const QString &entryName, const QVersionNumber &vr,
                              const TypeEntry *parent);
 
-    InterfaceTypeEntry *designatedInterface() const override;
-    void setDesignatedInterface(InterfaceTypeEntry *entry)
-    {
-        m_interface = entry;
-    }
-
-    bool isNativeIdBased() const override;
-
     TypeEntry *clone() const override;
 
 protected:
     ObjectTypeEntry(const ObjectTypeEntry &);
-
-private:
-    InterfaceTypeEntry *m_interface = nullptr;
 };
 
 struct TypeRejection

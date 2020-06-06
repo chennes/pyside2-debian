@@ -54,6 +54,7 @@
 #include <utility>
 
 #define QT_SIGNAL_SENTINEL '2'
+#define PyEnumMeta_Check(x) (strcmp(Py_TYPE(arg)->tp_name, "EnumMeta") == 0)
 
 namespace PySide {
 namespace Signal {
@@ -114,9 +115,9 @@ static PyType_Slot PySideMetaSignalType_slots[] = {
     {0, 0}
 };
 static PyType_Spec PySideMetaSignalType_spec = {
-    "PySide2.QtCore.MetaSignal",
+    "2:PySide2.QtCore.MetaSignal",
     0,
-    // sizeof(PyHeapTypeObject) is filled in by PyType_FromSpecWithBases
+    // sizeof(PyHeapTypeObject) is filled in by SbkType_FromSpecWithBases
     // which calls PyType_Ready which calls inherit_special.
     0,
     Py_TPFLAGS_DEFAULT,
@@ -129,7 +130,7 @@ PyTypeObject *PySideMetaSignalTypeF(void)
     static PyTypeObject *type = nullptr;
     if (!type) {
         PyObject *bases = Py_BuildValue("(O)", &PyType_Type);
-        type = (PyTypeObject *)PyType_FromSpecWithBases(&PySideMetaSignalType_spec, bases);
+        type = (PyTypeObject *)SbkType_FromSpecWithBases(&PySideMetaSignalType_spec, bases);
         Py_XDECREF(bases);
     }
     return type;
@@ -146,7 +147,7 @@ static PyType_Slot PySideSignalType_slots[] = {
     {0, 0}
 };
 static PyType_Spec PySideSignalType_spec = {
-    "PySide2.QtCore.Signal",
+    "2:PySide2.QtCore.Signal",
     sizeof(PySideSignal),
     0,
     Py_TPFLAGS_DEFAULT,
@@ -158,7 +159,7 @@ PyTypeObject *PySideSignalTypeF(void)
 {
     static PyTypeObject *type = nullptr;
     if (!type) {
-        type = (PyTypeObject *)PyType_FromSpec(&PySideSignalType_spec);
+        type = reinterpret_cast<PyTypeObject *>(SbkType_FromSpec(&PySideSignalType_spec));
         PyTypeObject *hold = Py_TYPE(type);
         Py_TYPE(type) = PySideMetaSignalTypeF();
         Py_INCREF(Py_TYPE(type));
@@ -185,7 +186,7 @@ static PyType_Slot PySideSignalInstanceType_slots[] = {
     {0, 0}
 };
 static PyType_Spec PySideSignalInstanceType_spec = {
-    "PySide2.QtCore.SignalInstance",
+    "2:PySide2.QtCore.SignalInstance",
     sizeof(PySideSignalInstance),
     0,
     Py_TPFLAGS_DEFAULT,
@@ -196,7 +197,7 @@ static PyType_Spec PySideSignalInstanceType_spec = {
 PyTypeObject *PySideSignalInstanceTypeF(void)
 {
     static PyTypeObject *type =
-        (PyTypeObject *)PyType_FromSpec(&PySideSignalInstanceType_spec);
+        reinterpret_cast<PyTypeObject *>(SbkType_FromSpec(&PySideSignalInstanceType_spec));
     return type;
 }
 
@@ -241,7 +242,7 @@ int signalTpInit(PyObject *self, PyObject *args, PyObject *kwds)
 
     for (Py_ssize_t i = 0, i_max = PyTuple_Size(args); i < i_max; i++) {
         PyObject *arg = PyTuple_GET_ITEM(args, i);
-        if (PySequence_Check(arg) && !Shiboken::String::check(arg)) {
+        if (PySequence_Check(arg) && !Shiboken::String::check(arg) && !PyEnumMeta_Check(arg)) {
             tupledArgs = true;
             const auto sig = PySide::Signal::parseSignature(arg);
             PySide::Signal::appendSignature(
@@ -804,32 +805,6 @@ PySideSignalInstance *newObjectFromMethod(PyObject *source, const QList<QMetaMet
     return root;
 }
 
-PySideSignal *newObject(const char *name, ...)
-{
-    va_list listSignatures;
-    char *sig = nullptr;
-    PySideSignal *self = PyObject_New(PySideSignal, PySideSignalTypeF());
-    self->data = new PySideSignalData;
-    self->data->signalName = name;
-    self->homonymousMethod = 0;
-
-    va_start(listSignatures, name);
-    sig = va_arg(listSignatures, char *);
-
-    while (sig != NULL) {
-        if (strcmp(sig, "void") == 0)
-            appendSignature(self, SignalSignature(""));
-        else
-            appendSignature(self, SignalSignature(sig));
-
-        sig = va_arg(listSignatures, char *);
-    }
-
-    va_end(listSignatures);
-
-    return self;
-}
-
 template<typename T>
 static typename T::value_type join(T t, const char *sep)
 {
@@ -911,11 +886,6 @@ PyObject *buildQtCompatible(const QByteArray &signature)
 {
     const auto ba = QT_SIGNAL_SENTINEL + signature;
     return Shiboken::String::fromStringAndSize(ba, ba.size());
-}
-
-void addSignalToWrapper(SbkObjectType *wrapperType, const char *signalName, PySideSignal *signal)
-{
-    _addSignalToWrapper(wrapperType, signalName, signal);
 }
 
 PyObject *getObject(PySideSignalInstance *signal)

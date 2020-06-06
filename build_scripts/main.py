@@ -74,10 +74,12 @@ def get_package_version():
 
     final_version = "{}.{}.{}".format(
         d['major_version'], d['minor_version'], d['patch_version'])
-    pre_release_version_type = d['pre_release_version_type']
+    release_version_type = d['release_version_type']
     pre_release_version = d['pre_release_version']
-    if pre_release_version and pre_release_version_type:
-        final_version += pre_release_version_type + pre_release_version
+    if pre_release_version and release_version_type:
+        final_version += release_version_type + pre_release_version
+    if release_version_type.startswith("comm"):
+        final_version += "." + release_version_type
 
     # Add the current timestamp to the version number, to suggest it
     # is a development snapshot build.
@@ -530,7 +532,13 @@ class PysideBuild(_build):
         self.py_scripts_dir = py_scripts_dir
         if py_libdir is None or not os.path.exists(py_libdir):
             if sys.platform == "win32":
-                py_libdir = os.path.join(py_prefix, "libs")
+                # For virtual environments on Windows, the py_prefix will contain a path pointing
+                # to it, instead of the system Python installation path.
+                # Since INCLUDEPY contains a path to the system location, we use the same base
+                # directory to define the py_libdir variable.
+                py_libdir = os.path.join(os.path.dirname(py_include_dir), "libs")
+                if not os.path.isdir(py_libdir):
+                    raise DistutilsSetupError("Failed to locate the 'libs' directory")
             else:
                 py_libdir = os.path.join(py_prefix, "lib")
         if py_include_dir is None or not os.path.exists(py_include_dir):

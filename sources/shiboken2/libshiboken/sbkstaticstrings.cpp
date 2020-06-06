@@ -54,6 +54,8 @@ namespace PyName {
 // exported:
 STATIC_STRING_IMPL(dumps, "dumps")
 STATIC_STRING_IMPL(loads, "loads")
+STATIC_STRING_IMPL(result, "result")
+STATIC_STRING_IMPL(values, "values")
 
 // Internal:
 STATIC_STRING_IMPL(classmethod, "classmethod")
@@ -73,6 +75,7 @@ STATIC_STRING_IMPL(ecf, "__ecf__")
 STATIC_STRING_IMPL(file, "__file__")
 STATIC_STRING_IMPL(module, "__module__")
 STATIC_STRING_IMPL(name, "__name__")
+STATIC_STRING_IMPL(qualname, "__qualname__")
 
 // Internal:
 STATIC_STRING_IMPL(base, "__base__")

@@ -68,9 +68,7 @@
 [QtQml::qquickitem_grabToImage]
     darwin
 [smart::smart_pointer]
-    win32
-    linux
-    darwin
+    py2
 # PYSIDE-474
 [QtWebEngineWidgets::pyside-474-qtwebengineview]
     py2
@@ -94,4 +92,7 @@
 [QtPositioning::positioning]
     win32
     linux
+    darwin
+# Open GL functions failures on macOS (2/2020)
+[registry::existence_test]
     darwin

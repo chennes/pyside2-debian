@@ -31,6 +31,7 @@
 #include "typesystem.h"
 
 #include <QtCore/QStack>
+#include <QtCore/QHash>
 #include <QtCore/QScopedPointer>
 
 QT_FORWARD_DECLARE_CLASS(QXmlStreamAttributes)
@@ -86,6 +87,7 @@ class StackElement
             NativeToTarget              = 0x1100,
             TargetToNative              = 0x1200,
             AddConversion               = 0x1300,
+            SystemInclude               = 0x1400,
             SimpleMask                  = 0x3f00,
 
             // Code snip tags (0x1000, 0x2000, ... , 0xf000)
@@ -151,6 +153,8 @@ public:
     QString errorString() const { return m_error; }
 
 private:
+    bool parseXml(QXmlStreamReader &reader);
+    bool setupSmartPointerInstantiations();
     bool startElement(const QXmlStreamReader &reader);
     SmartPointerTypeEntry *parseSmartPointerEntry(const QXmlStreamReader &,
                                                   const QString &name,
@@ -184,9 +188,6 @@ private:
                                 const QString &name, const QVersionNumber &since,
                                 QXmlStreamAttributes *attributes);
 
-    ObjectTypeEntry *
-        parseInterfaceTypeEntry(const QXmlStreamReader &, const QString &name,
-                                const QVersionNumber &since, QXmlStreamAttributes *);
     ValueTypeEntry *
         parseValueTypeEntry(const QXmlStreamReader &, const QString &name,
                             const QVersionNumber &since, QXmlStreamAttributes *);
@@ -247,6 +248,7 @@ private:
                           StackElement* element, QXmlStreamAttributes *);
      bool parseInclude(const QXmlStreamReader &, const StackElement &topElement,
                        TypeEntry *entry, QXmlStreamAttributes *);
+     bool parseSystemInclude(const QXmlStreamReader &, QXmlStreamAttributes *);
      TemplateInstance
          *parseTemplateInstanceEnum(const QXmlStreamReader &, const StackElement &topElement,
                                     QXmlStreamAttributes *);
@@ -271,6 +273,7 @@ private:
     QString m_currentSignature;
     QString m_currentPath;
     QScopedPointer<TypeSystemEntityResolver> m_entityResolver;
+    QHash<SmartPointerTypeEntry *, QString> m_smartPointerInstantiations;
 };
 
 #endif // TYPESYSTEMPARSER_H

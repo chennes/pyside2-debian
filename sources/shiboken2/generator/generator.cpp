@@ -151,6 +151,12 @@ QString DefaultValue::constructorParameter() const
     return m_value + QLatin1String("()");
 }
 
+QString GeneratorContext::smartPointerWrapperName() const
+{
+    Q_ASSERT(m_type == SmartPointer);
+    return m_preciseClassType->cppSignature();
+}
+
 struct Generator::GeneratorPrivate
 {
     const ApiExtractor *apiextractor = nullptr;
@@ -159,7 +165,6 @@ struct Generator::GeneratorPrivate
     QString licenseComment;
     QString moduleName;
     QStringList instantiatedContainersNames;
-    QStringList instantiatedSmartPointerNames;
     QVector<const AbstractMetaType *> instantiatedContainers;
     QVector<const AbstractMetaType *> instantiatedSmartPointers;
 
@@ -211,6 +216,31 @@ QString Generator::getSimplifiedContainerTypeName(const AbstractMetaType *type)
     return typeName;
 }
 
+// Strip a "const QSharedPtr<const Foo> &" or similar to "QSharedPtr<Foo>" (PYSIDE-1016/454)
+const AbstractMetaType *canonicalSmartPtrInstantiation(const AbstractMetaType *type)
+{
+    AbstractMetaTypeList instantiations = type->instantiations();
+    Q_ASSERT(instantiations.size() == 1);
+    const bool needsFix = type->isConstant() || type->referenceType() != NoReference;
+    const bool pointeeNeedsFix = instantiations.constFirst()->isConstant();
+    if (!needsFix && !pointeeNeedsFix)
+        return type;
+    auto fixedType = type->copy();
+    fixedType->setReferenceType(NoReference);
+    fixedType->setConstant(false);
+    if (pointeeNeedsFix) {
+        auto fixedPointeeType = instantiations.constFirst()->copy();
+        fixedPointeeType->setConstant(false);
+        fixedType->setInstantiations(AbstractMetaTypeList(1, fixedPointeeType));
+    }
+    return fixedType;
+}
+
+static inline const TypeEntry *pointeeTypeEntry(const AbstractMetaType *smartPtrType)
+{
+    return smartPtrType->instantiations().constFirst()->typeEntry();
+}
+
 void Generator::addInstantiatedContainersAndSmartPointers(const AbstractMetaType *type,
                                                           const QString &context)
 {
@@ -244,18 +274,15 @@ void Generator::addInstantiatedContainersAndSmartPointers(const AbstractMetaType
             m_d->instantiatedContainers.append(type);
         }
     } else {
-        // Is smart pointer.
-        if (!m_d->instantiatedSmartPointerNames.contains(typeName)) {
-            m_d->instantiatedSmartPointerNames.append(typeName);
-            if (type->isConstant() || type->referenceType() != NoReference) {
-                // Strip a "const QSharedPtr<Foo> &" or similar to "QSharedPtr<Foo>" (PYSIDE-1016)
-                auto fixedType = type->copy();
-                fixedType->setReferenceType(NoReference);
-                fixedType->setConstant(false);
-                type = fixedType;
-            }
-            m_d->instantiatedSmartPointers.append(type);
-        }
+        // Is smart pointer. Check if the (const?) pointee is already known
+        auto pt = pointeeTypeEntry(type);
+        const bool present =
+            std::any_of(m_d->instantiatedSmartPointers.cbegin(), m_d->instantiatedSmartPointers.cend(),
+                        [pt] (const AbstractMetaType *t) {
+                            return pointeeTypeEntry(t) == pt;
+                        });
+        if (!present)
+            m_d->instantiatedSmartPointers.append(canonicalSmartPtrInstantiation(type));
     }
 
 }
@@ -387,9 +414,9 @@ void Generator::setOutputDirectory(const QString &outDir)
     m_d->outDir = outDir;
 }
 
-bool Generator::generateFileForContext(GeneratorContext &context)
+bool Generator::generateFileForContext(const GeneratorContext &context)
 {
-    AbstractMetaClass *cls = context.metaClass();
+    const AbstractMetaClass *cls = context.metaClass();
 
     if (!shouldGenerate(cls))
         return true;
@@ -397,8 +424,6 @@ bool Generator::generateFileForContext(GeneratorContext &context)
     const QString fileName = fileNameForContext(context);
     if (fileName.isEmpty())
         return true;
-    if (ReportHandler::isDebug(ReportHandler::SparseDebug))
-        qCDebug(lcShiboken) << "generating: " << fileName;
 
     QString filePath = outputDirectory() + QLatin1Char('/') + subDirectoryForClass(cls)
             + QLatin1Char('/') + fileName;
@@ -421,12 +446,28 @@ QString Generator::getFileNameBaseForSmartPointer(const AbstractMetaType *smartP
     return fileName;
 }
 
+GeneratorContext Generator::contextForClass(const AbstractMetaClass *c) const
+{
+    GeneratorContext result;
+    result.m_metaClass = c;
+    return result;
+}
+
+GeneratorContext Generator::contextForSmartPointer(const AbstractMetaClass *c,
+                                                   const AbstractMetaType *t) const
+{
+    GeneratorContext result;
+    result.m_metaClass = c;
+    result.m_preciseClassType = t;
+    result.m_type = GeneratorContext::SmartPointer;
+    return result;
+}
+
 bool Generator::generate()
 {
     const AbstractMetaClassList &classList = m_d->apiextractor->classes();
     for (AbstractMetaClass *cls : classList) {
-        GeneratorContext context(cls);
-        if (!generateFileForContext(context))
+        if (!generateFileForContext(contextForClass(cls)))
             return false;
     }
 
@@ -440,8 +481,7 @@ bool Generator::generate()
                                                            smartPointers)));
             return false;
         }
-        GeneratorContext context(smartPointerClass, type, true);
-        if (!generateFileForContext(context))
+        if (!generateFileForContext(contextForSmartPointer(smartPointerClass, type)))
             return false;
     }
     return finishGeneration();
@@ -449,7 +489,8 @@ bool Generator::generate()
 
 bool Generator::shouldGenerateTypeEntry(const TypeEntry *type) const
 {
-    return type->codeGeneration() & TypeEntry::GenerateTargetLang;
+    return (type->codeGeneration() & TypeEntry::GenerateTargetLang)
+        && NamespaceTypeEntry::isVisibleScope(type);
 }
 
 bool Generator::shouldGenerate(const AbstractMetaClass *metaClass) const
@@ -529,7 +570,7 @@ QTextStream &formatCode(QTextStream &s, const QString &code, Indentor &indentor)
 
             s << indentor << line.remove(0, limit);
         }
-        s << endl;
+        s << Qt::endl;
     }
     return s;
 }
@@ -670,6 +711,9 @@ DefaultValue Generator::minimalConstructor(const AbstractMetaType *type) const
     if (Generator::isPointer(type))
         return DefaultValue(DefaultValue::Pointer, QLatin1String("::") + type->typeEntry()->qualifiedCppName());
 
+    if (type->typeEntry()->isSmartPointer())
+        return minimalConstructor(type->typeEntry());
+
     if (type->typeEntry()->isComplex()) {
         auto cType = static_cast<const ComplexTypeEntry *>(type->typeEntry());
         if (cType->hasDefaultConstructor())
@@ -723,6 +767,9 @@ DefaultValue Generator::minimalConstructor(const TypeEntry *type) const
                            + type->qualifiedCppName())
             : DefaultValue(DefaultValue::Custom, ctor);
     }
+
+    if (type->isSmartPointer())
+        return DefaultValue(DefaultValue::DefaultConstructor, type->qualifiedCppName());
 
     if (type->isComplex())
         return minimalConstructor(AbstractMetaClass::findClass(classes(), type));
@@ -893,8 +940,12 @@ static QString getClassTargetFullName_(const T *t, bool includePackageName)
     QString name = t->name();
     const AbstractMetaClass *context = t->enclosingClass();
     while (context) {
-        name.prepend(QLatin1Char('.'));
-        name.prepend(context->name());
+        // If the type was marked as 'visible=false' we should not use it in
+        // the type name
+        if (NamespaceTypeEntry::isVisibleScope(context->typeEntry())) {
+            name.prepend(QLatin1Char('.'));
+            name.prepend(context->name());
+        }
         context = context->enclosingClass();
     }
     if (includePackageName) {

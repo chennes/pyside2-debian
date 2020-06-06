@@ -114,18 +114,24 @@ namespace PySide {
 PyObjectWrapper::PyObjectWrapper()
     :m_me(Py_None)
 {
+    // PYSIDE-813: When PYSIDE-164 was solved by adding some thread allowance,
+    // this code was no longer protected. It was hard to find this connection.
+    // See the website https://bugreports.qt.io/browse/PYSIDE-813 for details.
+    Shiboken::GilState gil;
     Py_XINCREF(m_me);
 }
 
 PyObjectWrapper::PyObjectWrapper(PyObject *me)
     : m_me(me)
 {
+    Shiboken::GilState gil;
     Py_XINCREF(m_me);
 }
 
 PyObjectWrapper::PyObjectWrapper(const PyObjectWrapper &other)
     : m_me(other.m_me)
 {
+    Shiboken::GilState gil;
     Py_XINCREF(m_me);
 }
 
@@ -142,6 +148,7 @@ PyObjectWrapper::~PyObjectWrapper()
 
 void PyObjectWrapper::reset(PyObject *o)
 {
+    Shiboken::GilState gil;
     Py_XINCREF(o);
     Py_XDECREF(m_me);
     m_me = o;
@@ -550,10 +557,19 @@ bool SignalManager::registerMetaMethod(QObject *source, const char *signature, Q
 
 static MetaObjectBuilder *metaBuilderFromDict(PyObject *dict)
 {
+    // PYSIDE-803: The dict in this function is the ob_dict of an SbkObject.
+    // The "metaObjectAttr" entry is only handled in this file. There is no
+    // way in this function to involve the interpreter. Therefore, we need
+    // no GIL.
+    // Note that "SignalManager::registerMetaMethodGetIndex" has write actions
+    // that might involve the interpreter, but in that context the GIL is held.
     if (!dict || !PyDict_Contains(dict, metaObjectAttr))
         return nullptr;
 
-    PyObject *pyBuilder = PyDict_GetItem(dict, metaObjectAttr);
+    // PYSIDE-813: The above assumption is not true in debug mode:
+    // PyDict_GetItem would touch PyThreadState_GET and the global error state.
+    // PyDict_GetItemWithError instead can work without GIL.
+    PyObject *pyBuilder = PyDict_GetItemWithError(dict, metaObjectAttr);
 #ifdef IS_PY3K
     return reinterpret_cast<MetaObjectBuilder *>(PyCapsule_GetPointer(pyBuilder, nullptr));
 #else
@@ -605,7 +621,14 @@ int SignalManager::registerMetaMethodGetIndex(QObject *source, const char *signa
 
 const QMetaObject *SignalManager::retrieveMetaObject(PyObject *self)
 {
-    Shiboken::GilState gil;
+    // PYSIDE-803: Avoid the GIL in SignalManager::retrieveMetaObject
+    // This function had the GIL. We do not use the GIL unless we have to.
+    // metaBuilderFromDict accesses a Python dict, but in that context there
+    // is no way to reach the interpreter, see "metaBuilderFromDict".
+    //
+    // The update function is MetaObjectBuilderPrivate::update in
+    // dynamicmetaobject.c . That function now uses the GIL when the
+    // m_dirty flag is set.
     Q_ASSERT(self);
 
     MetaObjectBuilder *builder = metaBuilderFromDict(reinterpret_cast<SbkObject *>(self)->ob_dict);

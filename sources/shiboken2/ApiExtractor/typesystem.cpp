@@ -144,7 +144,7 @@ ComplexTypeEntry::ComplexTypeEntry(const ComplexTypeEntry &) = default;
 
 QString ContainerTypeEntry::qualifiedCppName() const
 {
-    if (m_type == StringListContainer)
+    if (m_containerKind == StringListContainer)
         return QLatin1String("QStringList");
     return ComplexTypeEntry::qualifiedCppName();
 }
@@ -433,7 +433,7 @@ QDebug operator<<(QDebug d, const CodeSnip &s)
 
 void Modification::formatDebug(QDebug &d) const
 {
-    d << "modifiers=" << hex << showbase << modifiers << noshowbase << dec;
+    d << "modifiers=" << Qt::hex << Qt::showbase << modifiers << Qt::noshowbase << Qt::dec;
     if (removal)
       d << ", removal";
     if (!renamedToName.isEmpty())
@@ -595,7 +595,7 @@ QString ComplexTypeEntry::targetLangApiName() const
 
 QString ContainerTypeEntry::typeName() const
 {
-    switch(m_type) {
+    switch (m_containerKind) {
         case LinkedListContainer:
             return QLatin1String("linked-list");
         case ListContainer:
@@ -684,6 +684,15 @@ TypeEntry::~TypeEntry()
     delete m_customConversion;
 }
 
+bool TypeEntry::isChildOf(const TypeEntry *p) const
+{
+    for (auto e = m_parent; e; e = e->parent()) {
+        if (e == p)
+            return true;
+    }
+    return false;
+}
+
 const TypeSystemTypeEntry *TypeEntry::typeSystemTypeEntry() const
 {
     for (auto e = this; e; e = e->parent()) {
@@ -691,6 +700,16 @@ const TypeSystemTypeEntry *TypeEntry::typeSystemTypeEntry() const
             return static_cast<const TypeSystemTypeEntry *>(e);
     }
     return nullptr;
+}
+
+const TypeEntry *TypeEntry::targetLangEnclosingEntry() const
+{
+    auto result = m_parent;
+    while (result && result->type() != TypeEntry::TypeSystemType
+           && !NamespaceTypeEntry::isVisibleScope(result)) {
+        result = result->parent();
+    }
+    return result;
 }
 
 QString TypeEntry::targetLangName() const
@@ -704,11 +723,13 @@ QString TypeEntry::buildTargetLangName() const
 {
     QString result = m_entryName;
     for (auto p = parent(); p && p->type() != TypeEntry::TypeSystemType; p = p->parent()) {
-        if (!result.isEmpty())
-            result.prepend(QLatin1Char('.'));
-        QString n = p->m_entryName;
-        n.replace(QLatin1String("::"), QLatin1String(".")); // Primitive types may have "std::"
-        result.prepend(n);
+        if (NamespaceTypeEntry::isVisibleScope(p)) {
+            if (!result.isEmpty())
+                result.prepend(QLatin1Char('.'));
+            QString n = p->m_entryName;
+            n.replace(QLatin1String("::"), QLatin1String(".")); // Primitive types may have "std::"
+            result.prepend(n);
+        }
     }
     return result;
 }
@@ -752,6 +773,8 @@ TypeEntry *TypeEntry::clone() const
 // Take over parameters relevant for typedefs
 void TypeEntry::useAsTypedef(const TypeEntry *source)
 {
+    // XML Typedefs are in the global namespace for now.
+    m_parent = source->typeSystemTypeEntry();
     m_entryName = source->m_entryName;
     m_name = source->m_name;
     m_targetLangPackage = source->m_targetLangPackage;
@@ -905,11 +928,11 @@ TypeEntry *TypedefEntry::clone() const
 
 TypedefEntry::TypedefEntry(const TypedefEntry &) = default;
 
-ContainerTypeEntry::ContainerTypeEntry(const QString &entryName, Type type,
+ContainerTypeEntry::ContainerTypeEntry(const QString &entryName, ContainerKind containerKind,
                                        const QVersionNumber &vr,
                                        const TypeEntry *parent) :
     ComplexTypeEntry(entryName, ContainerType, vr, parent),
-    m_type(type)
+    m_containerKind(containerKind)
 {
     setCodeGeneration(GenerateForSubclass);
 }
@@ -932,6 +955,11 @@ TypeEntry *SmartPointerTypeEntry::clone() const
 }
 
 SmartPointerTypeEntry::SmartPointerTypeEntry(const SmartPointerTypeEntry &) = default;
+
+bool SmartPointerTypeEntry::matchesInstantiation(const TypeEntry *e) const
+{
+    return m_instantiations.isEmpty() || m_instantiations.contains(e);
+}
 
 NamespaceTypeEntry::NamespaceTypeEntry(const QString &entryName, const QVersionNumber &vr,
                                        const TypeEntry *parent) :
@@ -959,6 +987,18 @@ bool NamespaceTypeEntry::matchesFile(const QString &needle) const
     return m_filePattern.match(needle).hasMatch();
 }
 
+bool NamespaceTypeEntry::isVisible() const
+{
+    return m_visibility == TypeSystem::Visibility::Visible
+        || (m_visibility == TypeSystem::Visibility::Auto && !m_inlineNamespace);
+}
+
+bool NamespaceTypeEntry::isVisibleScope(const TypeEntry *e)
+{
+    return e->type() != TypeEntry::NamespaceType
+        || static_cast<const NamespaceTypeEntry *>(e)->isVisible();
+}
+
 ValueTypeEntry::ValueTypeEntry(const QString &entryName, const QVersionNumber &vr,
                                const TypeEntry *parent) :
     ComplexTypeEntry(entryName, BasicValueType, vr, parent)
@@ -966,11 +1006,6 @@ ValueTypeEntry::ValueTypeEntry(const QString &entryName, const QVersionNumber &v
 }
 
 bool ValueTypeEntry::isValue() const
-{
-    return true;
-}
-
-bool ValueTypeEntry::isNativeIdBased() const
 {
     return true;
 }
@@ -1122,30 +1157,6 @@ void CustomConversion::TargetToNativeConversion::setConversion(const QString& co
     m_d->conversion = conversion;
 }
 
-InterfaceTypeEntry::InterfaceTypeEntry(const QString &entryName, const QVersionNumber &vr,
-                                       const TypeEntry *parent) :
-    ComplexTypeEntry(entryName, InterfaceType, vr, parent)
-{
-}
-
-bool InterfaceTypeEntry::isNativeIdBased() const
-{
-    return true;
-}
-
-QString InterfaceTypeEntry::qualifiedCppName() const
-{
-    const int len = ComplexTypeEntry::qualifiedCppName().length() - interfaceName(QString()).length();
-    return ComplexTypeEntry::qualifiedCppName().left(len);
-}
-
-TypeEntry *InterfaceTypeEntry::clone() const
-{
-    return new InterfaceTypeEntry(*this);
-}
-
-InterfaceTypeEntry::InterfaceTypeEntry(const InterfaceTypeEntry &) = default;
-
 FunctionTypeEntry::FunctionTypeEntry(const QString &entryName, const QString &signature,
                                      const QVersionNumber &vr,
                                      const TypeEntry *parent) :
@@ -1165,16 +1176,6 @@ ObjectTypeEntry::ObjectTypeEntry(const QString &entryName, const QVersionNumber 
                                  const TypeEntry *parent)
     : ComplexTypeEntry(entryName, ObjectType, vr, parent)
 {
-}
-
-InterfaceTypeEntry *ObjectTypeEntry::designatedInterface() const
-{
-    return m_interface;
-}
-
-bool ObjectTypeEntry::isNativeIdBased() const
-{
-    return true;
 }
 
 TypeEntry *ObjectTypeEntry::clone() const

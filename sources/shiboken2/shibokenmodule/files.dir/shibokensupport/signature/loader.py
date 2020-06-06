@@ -75,14 +75,18 @@ try:
 except NameError:
     ModuleNotFoundError = ImportError
 
+def _qualname(x):
+    return getattr(x, "__qualname__", x.__name__)
+
 # patching inspect's formatting to keep the word "typing":
 def formatannotation(annotation, base_module=None):
     # if getattr(annotation, '__module__', None) == 'typing':
     #     return repr(annotation).replace('typing.', '')
     if isinstance(annotation, type):
+        name = _qualname(annotation)
         if annotation.__module__ in ('builtins', base_module):
-            return annotation.__qualname__
-        return annotation.__module__ + '.' + annotation.__qualname__
+            return name
+        return annotation.__module__ + '.' + name
     return repr(annotation)
 
 # Note also that during the tests we have a different encoding that would
@@ -152,10 +156,12 @@ if sys.version_info >= (3,):
     import inspect
     inspect.formatannotation = formatannotation
 else:
-    if "typing" not in sys.modules:
+    tp_name = "typing"
+    if tp_name not in sys.modules:
         orig_typing = False
         from shibokensupport import typing27 as typing
-        sys.modules["typing"] = typing
+        sys.modules[tp_name] = typing
+        typing.__name__ = tp_name
     else:
         import typing
     import inspect

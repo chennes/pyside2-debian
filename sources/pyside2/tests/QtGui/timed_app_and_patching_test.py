@@ -26,9 +26,15 @@
 ##
 #############################################################################
 
+import os
+import sys
 import unittest
 
-from helper import TimedQApplication
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from init_paths import init_test_paths
+init_test_paths(False)
+
+from helper.timedqapplication import TimedQApplication
 from PySide2.support import deprecated
 from PySide2.support.signature import importhandler
 from PySide2 import QtGui

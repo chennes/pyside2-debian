@@ -4,15 +4,19 @@ pyside2 (5.15.0-1~exp1) experimental; urgency=medium
   * Add test dependency on python3-all to fix autopkgtests (Closes: #950127)
 
   [ Gianfranco Costamagna ]
-  * Drop "uic" from control file, removed upstream (LP: #1874095)
+  * Add python3-distro needed for tests.
+  * Drop "uic" and "rcc" from control file, removed upstream (LP: #1874095)
   * Add missing Breaks/Replaces for upgrading from previous version
     (Closes: #949339)
   * Drop pyside2uic tests, dropped upstream
   * New upstream version 5.15.0 (Closes: #950126, Closes: #960008)
   * Drop old Fix-build-with-Qt-5.12, addressed upstream
+  * Add patch to fix build failures with old qt implementation
   * Refresh patches
   * Bump copyright years
   * Bump soname to 15
+  * Drop manpage, removed upstream
+  * Use llvm-9 to build, fixing a build failure
 
  -- Gianfranco Costamagna <locutusofborg@debian.org>  Sat, 06 Jun 2020 14:48:45 +0200
 

@@ -59,7 +59,7 @@ Build-Depends: chrpath,
 	       qml-module-qtquick-controls,
 	       xvfb,
 	       xauth
-Standards-Version: 4.4.1
+Standards-Version: 4.5.0
 Homepage: https://wiki.qt.io/Qt_for_Python
 Vcs-Git: https://salsa.debian.org/qt-kde-team/qt/pyside2.git
 Vcs-Browser: https://salsa.debian.org/qt-kde-team/qt/pyside2

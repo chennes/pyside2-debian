@@ -1,5 +1,6 @@
-pyside2 (5.15.0-1) UNRELEASED; urgency=medium
+pyside2 (5.15.0-1) unstable; urgency=medium
 
+  [ Gianfranco Costamagna ]
   * Team upload
   * Upload to unstable
   * Drop trailing spaces from changelog file
@@ -7,7 +8,7 @@ pyside2 (5.15.0-1) UNRELEASED; urgency=medium
   * Bump std-version to 4.5.0
   * Add R^3: no
 
- -- Gianfranco Costamagna <locutusofborg@debian.org>  Fri, 12 Jun 2020 12:45:12 +0200
+ -- Kurt Kremitzki <kurt@kwk.systems>  Thu, 25 Jun 2020 21:15:20 -0500
 
 pyside2 (5.15.0-1~exp1) experimental; urgency=medium
 

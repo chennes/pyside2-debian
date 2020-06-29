@@ -1,3 +1,8 @@
+pyside2 (5.15.0-2) UNRELEASED; urgency=medium
+
+
+ -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Mon, 29 Jun 2020 15:13:47 +0300
+
 pyside2 (5.15.0-1) unstable; urgency=medium
 
   [ Gianfranco Costamagna ]

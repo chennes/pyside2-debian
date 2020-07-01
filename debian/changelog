@@ -1,5 +1,10 @@
 pyside2 (5.15.0-3) UNRELEASED; urgency=medium
 
+  [ Dmitry Shachnev ]
+  * Bump Qt build-dependencies to 5.14. As most Qt packages have a
+    Build-Depends-Package field in their symbols files, dpkg-shlibdeps will
+    use that information and generate a runtime dependency on a new enough
+    Qt version (closes: #963983).
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 01 Jul 2020 12:30:59 +0300
 

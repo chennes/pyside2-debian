@@ -13,9 +13,11 @@ Build-Depends: chrpath,
                libqt5charts5-dev (>= 5.14),
                libqt5datavisualization5-dev (>= 5.14) [!mips64el !mipsel !mips],
                libqt5opengl5-dev (>= 5.14),
+               libqt5remoteobjects5-dev,
                libqt5scxml5-bin (>= 5.14),
                libqt5scxml5-dev (>= 5.14),
                libqt5sensors5-dev (>= 5.14),
+               libqt5serialport5-dev,
                libqt5svg5-dev (>= 5.14),
                libqt5texttospeech5-dev (>= 5.14),
                libqt5webchannel5-dev (>= 5.14),
@@ -51,6 +53,7 @@ Build-Depends: chrpath,
                qtlocation5-dev (>= 5.14),
                qtmultimedia5-dev (>= 5.14),
                qtpositioning5-dev (>= 5.14),
+               qtquickcontrols2-5-dev,
                qtscript5-dev (>= 5.14),
                qttools5-dev (>= 5.14),
                qtwebengine5-dev (>= 5.14) [amd64 arm64 armhf i386 mipsel],
@@ -226,6 +229,19 @@ Description: Python bindings for Qt5 Quick module (Python 3)
  .
  This package contains Python 3 bindings for the QtQuick module.
 
+Package: python3-pyside2.qtquickcontrols2
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
+ python3-pyside2.qtquick
+Multi-Arch: same
+Description: Python bindings for Qt5 QuickControls2 (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the QtQuickControls2 module.
+
 Package: python3-pyside2.qtpositioning
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
@@ -238,6 +254,19 @@ Description: Python bindings for Qt5 Positioning module (Python 3)
  is its rich set of widgets that provide standard GUI functionality.
  .
  This package contains Python 3 bindings for the QtPositioning module.
+
+Package: python3-pyside2.qtremoteobjects
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
+ python3-pyside2.qtcore, python3-pyside2.qtnetwork
+Multi-Arch: same
+Description: Python bindings for Qt5 RemoteObjects (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the QtRemoteObjects module.
 
 Package: python3-pyside2.qtx11extras
 Architecture: any
@@ -383,6 +412,19 @@ Description: Python bindings for Qt5 Sensors module (Python 3)
  is its rich set of widgets that provide standard GUI functionality.
  .
  This package contains Python 3 bindings for the QtSensors module.
+
+Package: python3-pyside2.qtserialport
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
+ python3-pyside2.qtcore
+Multi-Arch: same
+Description: Python bindings for Qt5 SerialPort (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the QtSerialPort module.
 
 Package: python3-pyside2.qtmultimedia
 Architecture: any

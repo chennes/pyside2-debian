@@ -1,5 +1,7 @@
 pyside2 (5.15.0-4) UNRELEASED; urgency=medium
 
+  [ Dmitry Shachnev ]
+  * Drop preload-libglx-mesa.patch, not needed with glibc ≥ 2.31-1.
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Tue, 14 Jul 2020 16:38:40 +0300
 

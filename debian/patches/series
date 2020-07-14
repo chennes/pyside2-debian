@@ -2,4 +2,3 @@ fix-spelling-errors.patch
 update-patchelf.patch
 blacklist-failing-tests.patch
 ftbfs-old-qt.patch
-preload-libglx-mesa.patch

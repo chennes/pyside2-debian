@@ -557,7 +557,7 @@ QString ShibokenGenerator::guessScopeForDefaultValue(const AbstractMetaFunction 
 {
     QString value = arg->defaultValueExpression();
 
-    if (value.isEmpty()
+    if (value.isEmpty() || value == QLatin1String("{}")
         || arg->hasModifiedDefaultValueExpression()
         || isPointer(arg->type())) {
         return value;
@@ -1143,6 +1143,12 @@ bool ShibokenGenerator::visibilityModifiedToPrivate(const AbstractMetaFunction *
             return true;
     }
     return false;
+}
+
+bool ShibokenGenerator::isNullPtr(const QString &value)
+{
+    return value == QLatin1String("0") || value == QLatin1String("nullptr")
+        || value == QLatin1String("NULLPTR") || value == QLatin1String("{}");
 }
 
 QString ShibokenGenerator::cpythonCheckFunction(const AbstractMetaType *metaType, bool genericNumberType)
@@ -1755,7 +1761,7 @@ void ShibokenGenerator::writeClassCodeSnips(QTextStream &s,
     processClassCodeSnip(code, context);
     s << INDENT << "// Begin code injection\n";
     s << code;
-    s << INDENT << "// End of code injection\n";
+    s << INDENT << "// End of code injection\n\n";
 }
 
 void ShibokenGenerator::writeCodeSnips(QTextStream &s,
@@ -1769,7 +1775,7 @@ void ShibokenGenerator::writeCodeSnips(QTextStream &s,
     processCodeSnip(code);
     s << INDENT << "// Begin code injection\n";
     s << code;
-    s << INDENT << "// End of code injection\n";
+    s << INDENT << "// End of code injection\n\n";
 }
 
 void ShibokenGenerator::writeCodeSnips(QTextStream &s,
@@ -1996,7 +2002,7 @@ void ShibokenGenerator::writeCodeSnips(QTextStream &s,
     processCodeSnip(code);
     s << INDENT << "// Begin code injection\n";
     s << code;
-    s << INDENT << "// End of code injection\n";
+    s << INDENT << "// End of code injection\n\n";
 }
 
 // Returns true if the string is an expression,

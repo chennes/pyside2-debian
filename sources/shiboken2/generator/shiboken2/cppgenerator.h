@@ -60,7 +60,13 @@ private:
 
     QString getVirtualFunctionReturnTypeName(const AbstractMetaFunction *func);
     void writeVirtualMethodNative(QTextStream &s, const AbstractMetaFunction *func, int cacheIndex);
-
+    void writeVirtualMethodCppCall(QTextStream &s, const AbstractMetaFunction *func,
+                                   const QString &funcName, const CodeSnipList &snips,
+                                   const AbstractMetaArgument *lastArg, const TypeEntry *retType,
+                                   const QString &returnStatement);
+    QString virtualMethodReturn(QTextStream &s,
+                                const AbstractMetaFunction *func,
+                                const FunctionModificationList &functionModifications);
     void writeMetaObjectMethod(QTextStream &s, const GeneratorContext &classContext);
     void writeMetaCast(QTextStream &s, const GeneratorContext &classContext);
 

@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2019 The Qt Company Ltd.
+** Copyright (C) 2020 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of Qt for Python.
@@ -30,6 +30,7 @@
 #define ABSTRACTMETALANG_H
 
 #include "abstractmetalang_typedefs.h"
+#include "sourcelocation.h"
 #include "typesystem_enums.h"
 #include "typesystem_typedefs.h"
 
@@ -38,6 +39,7 @@
 
 #include <QtCore/qobjectdefs.h>
 #include <QtCore/QStringList>
+#include <QtCore/QMap>
 
 QT_FORWARD_DECLARE_CLASS(QDebug)
 
@@ -71,34 +73,27 @@ public:
         Native,
         Target
     };
+    enum Type {
+        Detailed,
+        Brief,
+        Last
+    };
 
     Documentation() = default;
+    Documentation(const QString& value, Type t = Documentation::Detailed,
+                  Format fmt = Documentation::Native);
 
-    Documentation(const QString& value, Format fmt = Documentation::Native)
-            : m_data(value.trimmed()), m_format(fmt) {}
+    bool isEmpty() const;
 
-    bool isEmpty() const { return m_data.isEmpty(); }
+    QString value(Type t = Documentation::Detailed) const;
+    void setValue(const QString& value, Type t = Documentation::Detailed,
+                  Format fmt = Documentation::Native);
 
-    QString value() const
-    {
-        return m_data;
-    }
-
-    void setValue(const QString& value, Format fmt = Documentation::Native)
-    {
-        m_data = value.trimmed();
-        m_format = fmt;
-    }
-
-    Documentation::Format format() const
-    {
-        return m_format;
-    }
-
-    void setFormat(Format f) { m_format = f; }
+    Documentation::Format format() const;
+    void setFormat(Format f);
 
 private:
-    QString m_data;
+    QMap<Type, QString> m_data;
     Format m_format = Documentation::Native;
 
 };
@@ -1093,6 +1088,9 @@ public:
     void formatDebugVerbose(QDebug &d) const;
 #endif
 
+    SourceLocation sourceLocation() const;
+    void setSourceLocation(const SourceLocation &sourceLocation);
+
 private:
     bool autoDetectAllowThread() const;
 
@@ -1111,6 +1109,7 @@ private:
     QPropertySpec *m_propertySpec = nullptr;
     AbstractMetaArgumentList m_arguments;
     AddedFunctionPtr m_addedFunction;
+    SourceLocation m_sourceLocation;
     uint m_constant                 : 1;
     uint m_reverse                  : 1;
     uint m_explicit                 : 1;
@@ -1682,6 +1681,9 @@ public:
     static AbstractMetaEnum *findEnum(const AbstractMetaClassList &classes,
                                       const EnumTypeEntry *entry);
 
+    SourceLocation sourceLocation() const;
+    void setSourceLocation(const SourceLocation &sourceLocation);
+
 private:
 #ifndef QT_NO_DEBUG_STREAM
     void format(QDebug &d) const;
@@ -1719,6 +1721,7 @@ private:
     QStringList m_baseClassNames;  // Base class names from C++, including rejected
     QVector<TypeEntry *> m_templateArgs;
     ComplexTypeEntry *m_typeEntry = nullptr;
+    SourceLocation m_sourceLocation;
 //     FunctionModelItem m_qDebugStreamFunction;
 
     bool m_stream = false;
@@ -1732,6 +1735,8 @@ class QPropertySpec
 {
 public:
     explicit QPropertySpec(const TypeEntry *type) : m_type(type) {}
+
+    bool isValid() const;
 
     const TypeEntry *type() const
     {
@@ -1798,6 +1803,10 @@ public:
         m_index = index;
     }
 
+#ifndef QT_NO_DEBUG_STREAM
+    void formatDebug(QDebug &d) const;
+#endif
+
 private:
     QString m_name;
     QString m_read;
@@ -1807,5 +1816,9 @@ private:
     const TypeEntry *m_type;
     int m_index = -1;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+QDebug operator<<(QDebug d, const QPropertySpec &p);
+#endif
 
 #endif // ABSTRACTMETALANG_H

@@ -231,12 +231,10 @@ Py_ssize_t len(PyObject *str)
 //
 //     PyObject *attr = PyObject_GetAttr(obj, name());
 //
-// Missing:
-// There is no finalization for the string structures, yet.
-// But this is a global fault in shiboken. We are missing a true
-// finalization like in all other modules.
 
 using StaticStrings = std::vector<PyObject *>;
+
+static void finalizeStaticStrings();    // forward
 
 static StaticStrings &staticStrings()
 {
@@ -244,8 +242,21 @@ static StaticStrings &staticStrings()
     return result;
 }
 
+static void finalizeStaticStrings()
+{
+    auto &list = staticStrings();
+    for (PyObject *ob : list)
+        Py_DECREF(ob);
+    list.clear();
+}
+
 PyObject *createStaticString(const char *str)
 {
+    static bool initialized = false;
+    if (!initialized) {
+        Py_AtExit(finalizeStaticStrings);
+        initialized = true;
+    }
 #if PY_VERSION_HEX >= 0x03000000
     PyObject *result = PyUnicode_InternFromString(str);
 #else
@@ -260,12 +271,48 @@ PyObject *createStaticString(const char *str)
     return result;
 }
 
-void finalizeStaticStrings() // Currently unused
+///////////////////////////////////////////////////////////////////////
+//
+// PYSIDE-1019: Helper function for snake_case vs. camelCase names
+// ---------------------------------------------------------------
+//
+// When renaming dict entries, `BindingManager::getOverride` must
+// use adapted names.
+//
+// This might become more complex when we need to register
+// exceptions from this rule.
+//
+
+PyObject *getSnakeCaseName(const char *name, bool lower)
 {
-    auto &list = staticStrings();
-    for (auto s : list)
-        Py_DECREF(s);
-    list.clear();
+    /*
+     * Convert `camelCase` to `snake_case`.
+     * Gives up when there are two consecutive upper chars.
+     *
+     * Also functions beginning with `gl` followed by upper case stay
+     * unchanged since that are the special OpenGL functions.
+     */
+    if (!lower
+        || strlen(name) < 3
+        || (name[0] == 'g' && name[1] == 'l' && isupper(name[2])))
+        return createStaticString(name);
+
+    char new_name[200 + 1] = {};
+    const char *p = name;
+    char *q = new_name;
+    for (; *p && q - new_name < 200; ++p, ++q) {
+        if (isupper(*p)) {
+            if (p != name && isupper(*(p - 1)))
+                return createStaticString(name);
+            *q = '_';
+            ++q;
+            *q = tolower(*p);
+        }
+        else {
+            *q = *p;
+        }
+    }
+    return createStaticString(new_name);
 }
 
 } // namespace String

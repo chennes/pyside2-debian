@@ -74,7 +74,8 @@ typedef struct safe_globals_struc {
     PyObject *helper_module;
     PyObject *arg_dict;
     PyObject *map_dict;
-    PyObject *value_dict;  // for writing signatures
+    PyObject *value_dict;       // for writing signatures
+    PyObject *feature_dict;     // registry for PySide.support.__feature__
     // init part 2: run module
     PyObject *pyside_type_init_func;
     PyObject *create_signature_func;
@@ -97,6 +98,7 @@ static PyObject *PySide_BuildSignatureProps(PyObject *class_mod);
 
 static void init_module_1(void);
 static void init_module_2(void);
+static PyObject *_init_pyside_extension(PyObject * /* self */, PyObject * /* args */);
 
 static PyObject *
 CreateSignature(PyObject *props, PyObject *key)
@@ -485,8 +487,14 @@ static const unsigned char PySide_SignatureLoader[] = {
 #include "embed/signature_bootstrap_inc.h"
     };
 
+// This function will be inserted into __builtins__.
+static PyMethodDef init_methods[] = {
+    {"_init_pyside_extension", (PyCFunction)_init_pyside_extension, METH_NOARGS},
+    {nullptr, nullptr}
+};
+
 static safe_globals_struc *
-init_phase_1(void)
+init_phase_1(PyMethodDef *init_meth)
 {
     {
         auto *p = reinterpret_cast<safe_globals_struc *>
@@ -572,8 +580,20 @@ init_phase_1(void)
         if (p->value_dict == nullptr)
             goto error;
 
+        // PYSIDE-1019: build a __feature__ dict
+        p->feature_dict = PyDict_New();
+        if (p->feature_dict == nullptr
+            || PyObject_SetAttrString(p->helper_module, "pyside_feature_dict", p->feature_dict) < 0)
+            goto error;
+
         // This function will be disabled until phase 2 is done.
         p->finish_import_func = nullptr;
+
+        // Initialize the explicit init function.
+        Shiboken::AutoDecRef init(PyCFunction_NewEx(init_meth, nullptr, nullptr));
+        if (init.isNull()
+            || PyDict_SetItemString(PyEval_GetBuiltins(), init_meth->ml_name, init) != 0)
+            goto error;
 
         return p;
     }
@@ -646,17 +666,22 @@ _fixup_getset(PyTypeObject *type, const char *name, PyGetSetDef *new_gsp)
             }
         }
     }
-    // staticmethod has just a __doc__ in the class
-    assert(strcmp(type->tp_name, "staticmethod") == 0);
+    PyMemberDef *md = type->tp_members;
+    if (md != nullptr)
+        for (; md->name != nullptr; md++)
+            if (strcmp(md->name, name) == 0)
+                return 1;
+    // staticmethod has just a `__doc__` in the class
+    assert(strcmp(type->tp_name, "staticmethod") == 0 && strcmp(name, "__doc__") == 0);
     return 0;
 }
 
 static int
-add_more_getsets(PyTypeObject *type, PyGetSetDef *gsp, PyObject **old_descr)
+add_more_getsets(PyTypeObject *type, PyGetSetDef *gsp, PyObject **doc_descr)
 {
     /*
-     * This function is used to assign a new __signature__ attribute,
-     * and also to override a __doc__ attribute.
+     * This function is used to assign a new `__signature__` attribute,
+     * and also to override a `__doc__` or `__name__` attribute.
      */
     assert(PyType_Check(type));
     PyType_Ready(type);
@@ -664,9 +689,11 @@ add_more_getsets(PyTypeObject *type, PyGetSetDef *gsp, PyObject **old_descr)
     for (; gsp->name != nullptr; gsp++) {
         PyObject *have_descr = PyDict_GetItemString(dict, gsp->name);
         if (have_descr != nullptr) {
-            assert(strcmp(gsp->name, "__doc__") == 0);
             Py_INCREF(have_descr);
-            *old_descr = have_descr;
+            if (strcmp(gsp->name, "__doc__") == 0)
+                *doc_descr = have_descr;
+            else
+                assert(false);
             if (!_fixup_getset(type, gsp->name, gsp))
                 continue;
         }
@@ -717,8 +744,9 @@ handle_doc(PyObject *ob, PyObject *old_descr)
         name = reinterpret_cast<PyTypeObject *>(ob_type_mod.object())->tp_name;
     if (handle_doc_in_progress || name == nullptr
         || strncmp(name, "PySide2.", 8) != 0)
-        return PyObject_CallMethod(old_descr, const_cast<char *>("__get__"),
-            const_cast<char *>("(O)"), ob);
+        return PyObject_CallMethodObjArgs(old_descr,
+                                          Shiboken::PyMagicName::get(),
+                                          ob, nullptr);
     handle_doc_in_progress++;
     PyObject *res = PyObject_CallFunction(
                         pyside_globals->make_helptext_func,
@@ -817,7 +845,7 @@ static PyGetSetDef new_PyWrapperDescr_getsets[] = {
 //
 // Additionally to the interface via __signature__, we also provide
 // a general function, which allows for different signature layouts.
-// The "modifier" argument is a string that is passed in from loader.py .
+// The "modifier" argument is a string that is passed in from 'loader.py'.
 // Configuration what the modifiers mean is completely in Python.
 //
 
@@ -852,6 +880,14 @@ get_signature(PyObject * /* self */, PyObject *args)
     PyObject *ret = get_signature_intern(ob, modifier);
     if (ret != nullptr)
         return ret;
+    Py_RETURN_NONE;
+}
+
+static PyObject *
+_init_pyside_extension(PyObject * /* self */, PyObject * /* args */)
+{
+    init_module_1();
+    init_module_2();
     Py_RETURN_NONE;
 }
 
@@ -902,13 +938,25 @@ PySide_PatchTypes(void)
                                         reinterpret_cast<PyObject *>(&PyString_Type), "split"));
         Shiboken::AutoDecRef wrap_descr(PyObject_GetAttrString(
                                         reinterpret_cast<PyObject *>(Py_TYPE(Py_True)), "__add__"));
+        // abbreviations for readability
+        auto md_gs = new_PyMethodDescr_getsets;
+        auto md_doc = &old_md_doc_descr;
+        auto cf_gs = new_PyCFunction_getsets;
+        auto cf_doc = &old_cf_doc_descr;
+        auto sm_gs = new_PyStaticMethod_getsets;
+        auto sm_doc = &old_sm_doc_descr;
+        auto tp_gs = new_PyType_getsets;
+        auto tp_doc = &old_tp_doc_descr;
+        auto wd_gs = new_PyWrapperDescr_getsets;
+        auto wd_doc = &old_wd_doc_descr;
+
         if (meth_descr.isNull() || wrap_descr.isNull()
             || PyType_Ready(Py_TYPE(meth_descr)) < 0
-            || add_more_getsets(PepMethodDescr_TypePtr,  new_PyMethodDescr_getsets,  &old_md_doc_descr) < 0
-            || add_more_getsets(&PyCFunction_Type,       new_PyCFunction_getsets,    &old_cf_doc_descr) < 0
-            || add_more_getsets(PepStaticMethod_TypePtr, new_PyStaticMethod_getsets, &old_sm_doc_descr) < 0
-            || add_more_getsets(&PyType_Type,            new_PyType_getsets,         &old_tp_doc_descr) < 0
-            || add_more_getsets(Py_TYPE(wrap_descr),     new_PyWrapperDescr_getsets, &old_wd_doc_descr) < 0
+            || add_more_getsets(PepMethodDescr_TypePtr,  md_gs, md_doc) < 0
+            || add_more_getsets(&PyCFunction_Type,       cf_gs, cf_doc) < 0
+            || add_more_getsets(PepStaticMethod_TypePtr, sm_gs, sm_doc) < 0
+            || add_more_getsets(&PyType_Type,            tp_gs, tp_doc) < 0
+            || add_more_getsets(Py_TYPE(wrap_descr),     wd_gs, wd_doc) < 0
             )
             return -1;
 #ifndef _WIN32
@@ -928,7 +976,7 @@ init_module_1(void)
     static int init_done = 0;
 
     if (!init_done) {
-        pyside_globals = init_phase_1();
+        pyside_globals = init_phase_1(init_methods);
         if (pyside_globals != nullptr)
             init_done = 1;
     }
@@ -1207,8 +1255,8 @@ FinishSignatureInitialization(PyObject *module, const char *signatures[])
      * Still, it is not possible to call init phase 2 from here,
      * because the import is still running. Do it from Python!
      */
-    PySide_PatchTypes();
-    if (PySide_FinishSignatures(module, signatures) < 0) {
+    if (   PySide_PatchTypes() < 0
+        || PySide_FinishSignatures(module, signatures) < 0) {
         PyErr_Print();
         PyErr_SetNone(PyExc_ImportError);
     }
@@ -1257,6 +1305,12 @@ Sbk_TypeGet___signature__(PyObject *ob, PyObject *modifier)
 PyObject *Sbk_TypeGet___doc__(PyObject *ob)
 {
     return pyside_tp_get___doc__(ob);
+}
+
+PyObject *GetFeatureDict()
+{
+    init_module_1();
+    return pyside_globals->feature_dict;
 }
 
 } //extern "C"

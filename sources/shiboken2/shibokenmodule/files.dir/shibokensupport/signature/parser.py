@@ -110,8 +110,15 @@ def _parse_line(line):
     argstr = ret.arglist.replace("->", ".deref.")
     arglist = _parse_arglist(argstr)
     args = []
-    for arg in arglist:
-        name, ann = arg.split(":")
+    for idx, arg in enumerate(arglist):
+        tokens = arg.split(":")
+        if len(tokens) < 2:
+            if idx == 0 and tokens[0] == "self":
+                tokens = 2 * tokens     # "self: self"
+            else:
+                warnings.warn('Invalid argument "{}" in "{}".'.format(arg, line))
+                continue
+        name, ann = tokens
         if name in keyword.kwlist:
             if LIST_KEYWORDS:
                 print("KEYWORD", ret)

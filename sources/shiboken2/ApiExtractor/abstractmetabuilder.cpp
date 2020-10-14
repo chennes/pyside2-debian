@@ -42,7 +42,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
-#include <QTextCodec>
 #include <QTextStream>
 #include <QVariant>
 #include <QTime>
@@ -213,9 +212,8 @@ void AbstractMetaBuilderPrivate::checkFunctionModifications()
 
             if (!found) {
                 qCWarning(lcShiboken).noquote().nospace()
-                    << msgNoFunctionForModification(signature,
+                    << msgNoFunctionForModification(clazz, signature,
                                                     modification.originalSignature(),
-                                                    clazz->qualifiedCppName(),
                                                     possibleSignatures, functions);
             }
         }
@@ -554,9 +552,7 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
                 && !entry->isCustom()
                 && (entry->generateCode() & TypeEntry::GenerateTargetLang)
                 && !AbstractMetaClass::findClass(m_metaClasses, entry)) {
-                qCWarning(lcShiboken).noquote().nospace()
-                    << QStringLiteral("type '%1' is specified in typesystem, but not defined. This could potentially lead to compilation errors.")
-                                      .arg(entry->qualifiedCppName());
+                qCWarning(lcShiboken, "%s", qPrintable(msgTypeNotDefined(entry)));
             } else if (entry->generateCode() && entry->type() == TypeEntry::FunctionType) {
                 auto fte = static_cast<const FunctionTypeEntry *>(entry);
                 const QStringList &signatures = fte->signatures();
@@ -569,13 +565,13 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
                         }
                     }
                     if (!ok) {
-                        qCWarning(lcShiboken).noquote().nospace()
-                            << QStringLiteral("Global function '%1' is specified in typesystem, but not defined. This could potentially lead to compilation errors.")
-                                              .arg(signature);
+                        qCWarning(lcShiboken, "%s",
+                                  qPrintable(msgGlobalFunctionNotDefined(fte, signature)));
                     }
                 }
             } else if (entry->isEnum() && (entry->generateCode() & TypeEntry::GenerateTargetLang)) {
-                const QString name = static_cast<const EnumTypeEntry *>(entry)->targetLangQualifier();
+                auto enumEntry = static_cast<const EnumTypeEntry *>(entry);
+                const QString name = enumEntry->targetLangQualifier();
                 AbstractMetaClass *cls = AbstractMetaClass::findClass(m_metaClasses, name);
 
                 const bool enumFound = cls
@@ -584,9 +580,8 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
 
                 if (!enumFound) {
                     entry->setCodeGeneration(TypeEntry::GenerateNothing);
-                    qCWarning(lcShiboken).noquote().nospace()
-                        << QStringLiteral("enum '%1' is specified in typesystem, but not declared")
-                                          .arg(entry->qualifiedCppName());
+                    qCWarning(lcShiboken, "%s",
+                              qPrintable(msgEnumNotDefined(enumEntry)));
                 }
 
             }
@@ -745,8 +740,8 @@ AbstractMetaClass *AbstractMetaBuilderPrivate::traverseNamespace(const FileModel
 
     auto type = TypeDatabase::instance()->findNamespaceType(namespaceName, namespaceItem->fileName());
     if (!type) {
-        qCWarning(lcShiboken).noquote().nospace()
-            << QStringLiteral("namespace '%1' does not have a type entry").arg(namespaceName);
+        qCWarning(lcShiboken, "%s",
+                  qPrintable(msgNamespaceNoTypeEntry(namespaceItem, namespaceName)));
         return nullptr;
     }
 
@@ -1036,6 +1031,7 @@ AbstractMetaClass *AbstractMetaBuilderPrivate::traverseClass(const FileModelItem
     }
 
     auto *metaClass = new AbstractMetaClass;
+    metaClass->setSourceLocation(classItem->sourceLocation());
     metaClass->setTypeEntry(type);
 
     if (classItem->isFinal())
@@ -1073,7 +1069,7 @@ AbstractMetaClass *AbstractMetaBuilderPrivate::traverseClass(const FileModelItem
     }
     metaClass->setTemplateArguments(template_args);
 
-    parseQ_Property(metaClass, classItem->propertyDeclarations());
+    parseQ_Properties(metaClass, classItem->propertyDeclarations());
 
     traverseEnums(classItem, metaClass, classItem->enumsDeclarations());
 
@@ -1189,9 +1185,8 @@ AbstractMetaField *AbstractMetaBuilderPrivate::traverseField(const VariableModel
     if (!metaType) {
         const QString type = TypeInfo::resolveType(fieldType, currentScope()).qualifiedName().join(colonColon());
         if (cls->typeEntry()->codeGeneration() & TypeEntry::GenerateTargetLang) {
-            qCWarning(lcShiboken).noquote().nospace()
-                 << QStringLiteral("skipping field '%1::%2' with unmatched type '%3'")
-                                   .arg(cls->name(), fieldName, type);
+             qCWarning(lcShiboken, "%s",
+                       qPrintable(msgSkippingField(field, cls->name(), type)));
         }
         delete metaField;
         return nullptr;
@@ -1455,9 +1450,8 @@ bool AbstractMetaBuilderPrivate::setupInheritance(AbstractMetaClass *metaClass)
     for (const auto  &baseClassName : baseClasses) {
         if (!types->isClassRejected(baseClassName)) {
             if (!types->findType(baseClassName)) {
-                qCWarning(lcShiboken).noquote().nospace()
-                     << QStringLiteral("class '%1' inherits from unknown base class '%2'")
-                        .arg(metaClass->name(), baseClassName);
+                qCWarning(lcShiboken, "%s",
+                          qPrintable(msgUnknownBase(metaClass, baseClassName)));
                 return false;
             }
             auto baseClass = AbstractMetaClass::findClass(m_metaClasses, baseClassName);
@@ -1770,6 +1764,7 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
     }
 
     auto *metaFunction = new AbstractMetaFunction;
+    metaFunction->setSourceLocation(functionItem->sourceLocation());
     if (deprecated)
         *metaFunction += AbstractMetaAttributes::Deprecated;
 
@@ -1868,16 +1863,14 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
         AbstractMetaType *metaType = translateType(arg->type(), currentClass, {}, &errorMessage);
         if (!metaType) {
             // If an invalid argument has a default value, simply remove it
-            if (arg->defaultValue()) {
+            // unless the function is virtual (since the override in the
+            // wrapper can then not correctly be generated).
+            if (arg->defaultValue() && !functionItem->isVirtual()) {
                 if (!currentClass
                     || (currentClass->typeEntry()->codeGeneration()
                         & TypeEntry::GenerateTargetLang)) {
-                    qCWarning(lcShiboken).noquote().nospace()
-                    << "Stripping argument #" << (i + 1) << " of "
-                    << originalQualifiedSignatureWithReturn
-                    << " due to unmatched type \"" << arg->type().toString()
-                    << "\" with default expression \""
-                    << arg->defaultValueExpression() << "\".";
+                    qCWarning(lcShiboken, "%s",
+                              qPrintable(msgStrippingArgument(functionItem, i, originalQualifiedSignatureWithReturn, arg)));
                 }
                 break;
             }
@@ -1941,8 +1934,8 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
         fixArgumentNames(metaFunction, functionMods);
         QString errorMessage;
         if (!applyArrayArgumentModifications(functionMods, metaFunction, &errorMessage)) {
-            qCWarning(lcShiboken, "While traversing %s: %s",
-                      qPrintable(className), qPrintable(errorMessage));
+            qCWarning(lcShiboken, "%s",
+                      qPrintable(msgArrayModificationFailed(functionItem, className, errorMessage)));
         }
     }
 
@@ -2789,51 +2782,77 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
     return true;
 }
 
-void AbstractMetaBuilderPrivate::parseQ_Property(AbstractMetaClass *metaClass,
-                                                 const QStringList &declarations)
+void AbstractMetaBuilderPrivate::parseQ_Properties(AbstractMetaClass *metaClass,
+                                                   const QStringList &declarations)
 {
     const QStringList scopes = currentScope()->qualifiedName();
-
+    QString errorMessage;
     for (int i = 0; i < declarations.size(); ++i) {
-        const auto propertyTokens = declarations.at(i).splitRef(QLatin1Char(' '));
-
-        AbstractMetaType *type = nullptr;
-        for (int j = scopes.size(); j >= 0; --j) {
-            QStringList qualifiedName = scopes.mid(0, j);
-            qualifiedName.append(propertyTokens.at(0).toString());
-            TypeInfo info;
-            info.setQualifiedName(qualifiedName);
-
-            type = translateType(info, metaClass);
-            if (type)
-                break;
+        if (auto spec = parseQ_Property(metaClass, declarations.at(i), scopes, &errorMessage)) {
+            spec->setIndex(i);
+            metaClass->addPropertySpec(spec);
+        } else {
+            QString message;
+            QTextStream str(&message);
+            str << metaClass->sourceLocation() << errorMessage;
+            qCWarning(lcShiboken, "%s", qPrintable(message));
         }
-
-        if (!type) {
-            qCWarning(lcShiboken).noquote().nospace()
-                << QStringLiteral("Unable to decide type of property: '%1' in class '%2'")
-                                  .arg(propertyTokens.at(0).toString(), metaClass->name());
-            continue;
-        }
-
-        auto *spec = new QPropertySpec(type->typeEntry());
-        spec->setName(propertyTokens.at(1).toString());
-        spec->setIndex(i);
-
-        for (int pos = 2; pos + 1 < propertyTokens.size(); pos += 2) {
-            if (propertyTokens.at(pos) == QLatin1String("READ"))
-                spec->setRead(propertyTokens.at(pos + 1).toString());
-            else if (propertyTokens.at(pos) == QLatin1String("WRITE"))
-                spec->setWrite(propertyTokens.at(pos + 1).toString());
-            else if (propertyTokens.at(pos) == QLatin1String("DESIGNABLE"))
-                spec->setDesignable(propertyTokens.at(pos + 1).toString());
-            else if (propertyTokens.at(pos) == QLatin1String("RESET"))
-                spec->setReset(propertyTokens.at(pos + 1).toString());
-        }
-
-        metaClass->addPropertySpec(spec);
-        delete type;
     }
+}
+
+QPropertySpec *AbstractMetaBuilderPrivate::parseQ_Property(AbstractMetaClass *metaClass,
+                                                           const QString &declaration,
+                                                           const QStringList &scopes,
+                                                           QString *errorMessage)
+{
+    errorMessage->clear();
+
+    // Q_PROPERTY(QString objectName READ objectName WRITE setObjectName NOTIFY objectNameChanged)
+
+    auto propertyTokens = declaration.splitRef(QLatin1Char(' '), Qt::SkipEmptyParts);
+    if (propertyTokens.size()  < 4) {
+        *errorMessage = QLatin1String("Insufficient number of tokens");
+        return nullptr;
+    }
+
+    const QString typeName = propertyTokens.takeFirst().toString();
+    const QString name = propertyTokens.takeFirst().toString();
+
+    QScopedPointer<AbstractMetaType> type;
+    for (int j = scopes.size(); j >= 0 && type.isNull(); --j) {
+        QStringList qualifiedName = scopes.mid(0, j);
+        qualifiedName.append(typeName);
+        TypeInfo info;
+        info.setQualifiedName(qualifiedName);
+        type.reset(translateType(info, metaClass));
+    }
+
+    if (!type) {
+        QTextStream str(errorMessage);
+        str << "Unable to decide type of property: \"" << name << "\" ("
+            <<  typeName << ')';
+        return nullptr;
+    }
+
+    QScopedPointer<QPropertySpec> spec(new QPropertySpec(type->typeEntry()));
+    spec->setName(name);
+
+    for (int pos = 0; pos + 1 < propertyTokens.size(); pos += 2) {
+        if (propertyTokens.at(pos) == QLatin1String("READ"))
+            spec->setRead(propertyTokens.at(pos + 1).toString());
+        else if (propertyTokens.at(pos) == QLatin1String("WRITE"))
+            spec->setWrite(propertyTokens.at(pos + 1).toString());
+        else if (propertyTokens.at(pos) == QLatin1String("DESIGNABLE"))
+            spec->setDesignable(propertyTokens.at(pos + 1).toString());
+        else if (propertyTokens.at(pos) == QLatin1String("RESET"))
+            spec->setReset(propertyTokens.at(pos + 1).toString());
+    }
+
+    if (!spec->isValid()) {
+        *errorMessage = QLatin1String("Incomplete specification");
+        return nullptr;
+    }
+    return spec.take();
 }
 
 static AbstractMetaFunction* findCopyCtor(AbstractMetaClass* cls)
@@ -3106,9 +3125,9 @@ AbstractMetaArgumentList AbstractMetaBuilderPrivate::reverseList(const AbstractM
     return ret;
 }
 
-void AbstractMetaBuilder::setGlobalHeader(const QString& globalHeader)
+void AbstractMetaBuilder::setGlobalHeaders(const QFileInfoList &globalHeaders)
 {
-    d->m_globalHeader = QFileInfo(globalHeader);
+    d->m_globalHeaders = globalHeaders;
 }
 
 void AbstractMetaBuilder::setHeaderPaths(const HeaderPaths &hp)
@@ -3146,23 +3165,26 @@ static bool matchHeader(const QString &headerPath, const QString &fileName)
         && fileName.startsWith(headerPath, caseSensitivity);
 }
 
-void AbstractMetaBuilderPrivate::setInclude(TypeEntry *te, const QString &fileName) const
+void AbstractMetaBuilderPrivate::setInclude(TypeEntry *te, const QString &path) const
 {
-    auto it = m_resolveIncludeHash.find(fileName);
+    auto it = m_resolveIncludeHash.find(path);
     if (it == m_resolveIncludeHash.end()) {
-        QFileInfo info(fileName);
-        if (m_globalHeader.fileName() == info.fileName())
+        QFileInfo info(path);
+        const QString fileName = info.fileName();
+        if (std::any_of(m_globalHeaders.cbegin(), m_globalHeaders.cend(),
+                        [fileName] (const QFileInfo &fi) {
+                            return fi.fileName() == fileName; })) {
             return;
+        }
 
         int bestMatchLength = 0;
         for (const auto &headerPath : m_headerPaths) {
-            if (headerPath.size() > bestMatchLength && matchHeader(headerPath, fileName))
+            if (headerPath.size() > bestMatchLength && matchHeader(headerPath, path))
                 bestMatchLength = headerPath.size();
         }
         const QString include = bestMatchLength > 0
-            ? fileName.right(fileName.size() - bestMatchLength - 1)
-            : info.fileName();
-        it = m_resolveIncludeHash.insert(fileName, {Include::IncludePath, include});
+            ? path.right(path.size() - bestMatchLength - 1) : fileName;
+        it = m_resolveIncludeHash.insert(path, {Include::IncludePath, include});
     }
     te->setInclude(it.value());
 }
@@ -3187,7 +3209,7 @@ static void debugFormatSequence(QDebug &d, const char *key, const Container& c,
 
 void AbstractMetaBuilder::formatDebug(QDebug &debug) const
 {
-    debug << "m_globalHeader=" << d->m_globalHeader.absoluteFilePath();
+    debug << "m_globalHeader=" << d->m_globalHeaders;
     debugFormatSequence(debug, "globalEnums", d->m_globalEnums, "\n");
     debugFormatSequence(debug, "globalFunctions", d->m_globalFunctions, "\n");
     if (const int scopeCount = d->m_scopes.size()) {

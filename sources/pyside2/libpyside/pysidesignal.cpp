@@ -54,7 +54,6 @@
 #include <utility>
 
 #define QT_SIGNAL_SENTINEL '2'
-#define PyEnumMeta_Check(x) (strcmp(Py_TYPE(arg)->tp_name, "EnumMeta") == 0)
 
 namespace PySide {
 namespace Signal {
@@ -361,7 +360,7 @@ PyObject *signalInstanceConnect(PyObject *self, PyObject *args, PyObject *kwds)
 
         if (isMethod || isFunction) {
             PyObject *function = isMethod ? PyMethod_GET_FUNCTION(slot) : slot;
-            PyCodeObject *objCode = reinterpret_cast<PyCodeObject *>(PyFunction_GET_CODE(function));
+            auto *objCode = reinterpret_cast<PepCodeObject *>(PyFunction_GET_CODE(function));
             useSelf = isMethod;
             slotArgs = PepCode_GET_FLAGS(objCode) & CO_VARARGS ? -1 : PepCode_GET_ARGCOUNT(objCode);
             if (useSelf)
@@ -568,7 +567,11 @@ PyObject *signalCall(PyObject *self, PyObject *args, PyObject *kw)
     Shiboken::AutoDecRef homonymousMethod(getDescriptor(signal->homonymousMethod, 0, 0));
     if (PyCFunction_Check(homonymousMethod)
             && (PyCFunction_GET_FLAGS(homonymousMethod.object()) & METH_STATIC)) {
+#if PY_VERSION_HEX >=  0x03090000
+        return PyObject_Call(homonymousMethod, args, kw);
+#else
         return PyCFunction_Call(homonymousMethod, args, kw);
+#endif
     }
 
     // Assumes homonymousMethod is not a static method.
@@ -586,7 +589,11 @@ PyObject *signalInstanceCall(PyObject *self, PyObject *args, PyObject *kw)
 
     descrgetfunc getDescriptor = Py_TYPE(PySideSignal->d->homonymousMethod)->tp_descr_get;
     Shiboken::AutoDecRef homonymousMethod(getDescriptor(PySideSignal->d->homonymousMethod, PySideSignal->d->source, 0));
+#if PY_VERSION_HEX >=  0x03090000
+        return PyObject_Call(homonymousMethod, args, kw);
+#else
     return PyCFunction_Call(homonymousMethod, args, kw);
+#endif
 }
 
 static PyObject *metaSignalCheck(PyObject * /* klass */, PyObject *arg)
@@ -680,6 +687,8 @@ QByteArray getTypeName(PyObject *type)
             return QByteArrayLiteral("double");
         if (objType == &PyBool_Type)
             return QByteArrayLiteral("bool");
+        if (objType == &PyList_Type)
+            return QByteArrayLiteral("QVariantList");
         if (Py_TYPE(objType) == SbkEnumType_TypeF())
             return Shiboken::Enum::getCppName(objType);
         return QByteArrayLiteral("PyObject");
@@ -900,20 +909,22 @@ const char *getSignature(PySideSignalInstance *signal)
 
 QStringList getArgsFromSignature(const char *signature, bool *isShortCircuit)
 {
-    const QString qsignature = QLatin1String(signature);
+    QString qsignature = QString::fromLatin1(signature).trimmed();
     QStringList result;
-    QRegExp splitRegex(QLatin1String("\\s*,\\s*"));
 
     if (isShortCircuit)
         *isShortCircuit = !qsignature.contains(QLatin1Char('('));
     if (qsignature.contains(QLatin1String("()")) || qsignature.contains(QLatin1String("(void)")))
         return result;
-    if (qsignature.contains(QLatin1Char('('))) {
-        static QRegExp regex(QLatin1String(".+\\((.*)\\)"));
-        //get args types
-        QString types = qsignature;
-        types.replace(regex, QLatin1String("\\1"));
-        result = types.split(splitRegex);
+    if (qsignature.endsWith(QLatin1Char(')'))) {
+        const int paren = qsignature.indexOf(QLatin1Char('('));
+        if (paren >= 0) {
+            qsignature.chop(1);
+            qsignature.remove(0, paren + 1);
+            result = qsignature.split(QLatin1Char(','));
+            for (QString &type : result)
+                type = type.trimmed();
+        }
     }
     return result;
 }
@@ -928,7 +939,7 @@ QString getCallbackSignature(const char *signal, QObject *receiver, PyObject *ca
 
     if (isMethod || isFunction) {
         PyObject *function = isMethod ? PyMethod_GET_FUNCTION(callback) : callback;
-        auto objCode = reinterpret_cast<PyCodeObject *>(PyFunction_GET_CODE(function));
+        auto objCode = reinterpret_cast<PepCodeObject *>(PyFunction_GET_CODE(function));
         functionName = Shiboken::String::toCString(PepFunction_GetName(function));
         useSelf = isMethod;
         numArgs = PepCode_GET_FLAGS(objCode) & CO_VARARGS ? -1 : PepCode_GET_ARGCOUNT(objCode);

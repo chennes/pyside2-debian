@@ -32,6 +32,7 @@
 #include "typesystem_enums.h"
 #include "typesystem_typedefs.h"
 #include "include.h"
+#include "sourcelocation.h"
 
 #include <QtCore/QHash>
 #include <QtCore/qobjectdefs.h>
@@ -115,7 +116,7 @@ class CodeSnipAbstract
 public:
     QString code() const;
 
-    void addCode(const QString &code) { codeList.append(CodeSnipFragment(code)); }
+    void addCode(const QString &code);
     void addCode(const QStringRef &code) { addCode(code.toString()); }
 
     void addTemplateInstance(TemplateInstance *ti)
@@ -124,6 +125,10 @@ public:
     }
 
     QVector<CodeSnipFragment> codeList;
+
+    static QString fixSpaces(QString code);
+    static QString dedent(const QString &code);
+    static void prependCode(QString *code, QString firstLine);
 };
 
 class CustomFunction : public CodeSnipAbstract
@@ -510,8 +515,8 @@ public:
     explicit DocModification(TypeSystem::DocModificationMode mode, const QString& signature) :
         m_signature(signature), m_mode(mode) {}
 
-    void setCode(const QString& code) { m_code = code; }
-    void setCode(const QStringRef& code) { m_code = code.toString(); }
+    void setCode(const QString& code);
+    void setCode(const QStringRef& code) { setCode(code.toString()); }
 
     QString code() const
     {
@@ -844,6 +849,9 @@ public:
 
     void useAsTypedef(const TypeEntry *source);
 
+    SourceLocation sourceLocation() const;
+    void setSourceLocation(const SourceLocation &sourceLocation);
+
 #ifndef QT_NO_DEBUG_STREAM
     virtual void formatDebug(QDebug &d) const;
 #endif
@@ -870,6 +878,7 @@ private:
     QString m_conversionRule;
     QVersionNumber m_version;
     CustomConversion *m_customConversion = nullptr;
+    SourceLocation m_sourceLocation; // XML file
     uint m_codeGeneration = GenerateAll;
     int m_revision = 0;
     int m_sbkIndex = 0;

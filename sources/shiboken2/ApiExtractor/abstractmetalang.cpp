@@ -1,6 +1,6 @@
 /****************************************************************************
 **
-** Copyright (C) 2019 The Qt Company Ltd.
+** Copyright (C) 2020 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
 ** This file is part of Qt for Python.
@@ -85,6 +85,49 @@ const AbstractMetaClass *recurseClassHierarchy(const AbstractMetaClass *klass,
             return r;
     }
     return nullptr;
+}
+
+/*******************************************************************************
+ * Documentation
+ */
+
+Documentation::Documentation(const QString &value, Documentation::Type t, Documentation::Format fmt)
+{
+    setValue(value, t, fmt);
+}
+
+bool Documentation::isEmpty() const
+{
+    for (int i = 0; i < Type::Last; i++) {
+        if (!m_data.value(static_cast<Type>(i)).isEmpty())
+            return false;
+    }
+    return true;
+}
+
+QString Documentation::value(Documentation::Type t) const
+{
+    return m_data.value(t);
+}
+
+void Documentation::setValue(const QString &value, Documentation::Type t, Documentation::Format fmt)
+{
+    const QString v = value.trimmed();
+    if (v.isEmpty())
+        m_data.remove(t);
+    else
+        m_data[t] = value.trimmed();
+    m_format = fmt;
+}
+
+Documentation::Format Documentation::format() const
+{
+    return m_format;
+}
+
+void Documentation::setFormat(Documentation::Format f)
+{
+    m_format = f;
 }
 
 /*******************************************************************************
@@ -781,6 +824,16 @@ bool AbstractMetaFunction::autoDetectAllowThread() const
     const bool maybeGetter = m_constant != 0 && m_type != nullptr
         && m_arguments.isEmpty();
     return !maybeGetter;
+}
+
+SourceLocation AbstractMetaFunction::sourceLocation() const
+{
+    return m_sourceLocation;
+}
+
+void AbstractMetaFunction::setSourceLocation(const SourceLocation &sourceLocation)
+{
+    m_sourceLocation = sourceLocation;
 }
 
 static inline TypeSystem::AllowThread allowThreadMod(const AbstractMetaClass *klass)
@@ -2609,6 +2662,15 @@ void AbstractMetaClass::format(QDebug &d) const
             d << (i ? ',' : '<') << instantiatedTypes.at(i)->name();
         d << ">\"";
     }
+    if (const int count = m_propertySpecs.size()) {
+        d << ", properties (" << count << "): [";
+        for (int i = 0; i < count; ++i) {
+            if (i)
+                d << ", ";
+            m_propertySpecs.at(i)->formatDebug(d);
+        }
+        d << ']';
+    }
 }
 
 void AbstractMetaClass::formatMembers(QDebug &d) const
@@ -2634,6 +2696,16 @@ void AbstractMetaClass::formatMembers(QDebug &d) const
         }
         d << ')';
     }
+}
+
+SourceLocation AbstractMetaClass::sourceLocation() const
+{
+    return m_sourceLocation;
+}
+
+void AbstractMetaClass::setSourceLocation(const SourceLocation &sourceLocation)
+{
+    m_sourceLocation = sourceLocation;
 }
 
 QDebug operator<<(QDebug d, const AbstractMetaClass *ac)
@@ -2705,3 +2777,33 @@ QString AbstractMetaEnum::package() const
 {
     return m_typeEntry->targetLangPackage();
 }
+
+bool QPropertySpec::isValid() const
+{
+    return m_type != nullptr && !m_name.isEmpty() && !m_read.isEmpty();
+}
+
+#ifndef QT_NO_DEBUG_STREAM
+void QPropertySpec::formatDebug(QDebug &d) const
+{
+    d << '#' << m_index << " \"" << m_name << "\" (" << m_type->qualifiedCppName()
+        << "), read=" << m_read;
+    if (!m_write.isEmpty())
+        d << ", write=" << m_write;
+    if (!m_reset.isEmpty())
+          d << ", reset=" << m_reset;
+    if (!m_designable.isEmpty())
+          d << ", esignable=" << m_designable;
+}
+
+QDebug operator<<(QDebug d, const QPropertySpec &p)
+{
+    QDebugStateSaver s(d);
+    d.noquote();
+    d.nospace();
+    d << "QPropertySpec(";
+    p.formatDebug(d);
+    d << ')';
+    return d;
+}
+#endif // QT_NO_DEBUG_STREAM

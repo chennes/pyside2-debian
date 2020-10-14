@@ -44,6 +44,7 @@
 #include "sbkdbg.h"
 #include "gilstate.h"
 #include "sbkstring.h"
+#include "sbkstaticstrings.h"
 #include "debugfreehook.h"
 
 #include <cstddef>
@@ -273,7 +274,13 @@ SbkObject *BindingManager::retrieveWrapper(const void *cptr)
     return iter->second;
 }
 
-PyObject *BindingManager::getOverride(const void *cptr, const char *methodName)
+static inline bool mangleNameFlag(PyTypeObject *type)
+{
+    // PYSIDE-1019: See if a dict is set with a snake_case bit.
+    return (SbkObjectType_GetReserved(type) & 1) != 0;
+}
+
+PyObject *BindingManager::getOverride(const void *cptr, PyObject *methodNameCache[2], const char *methodName)
 {
     SbkObject *wrapper = retrieveWrapper(cptr);
     // The refcount can be 0 if the object is dieing and someone called
@@ -281,26 +288,38 @@ PyObject *BindingManager::getOverride(const void *cptr, const char *methodName)
     if (!wrapper || reinterpret_cast<const PyObject *>(wrapper)->ob_refcnt == 0)
         return nullptr;
 
+    bool flag = mangleNameFlag(Py_TYPE(wrapper));
+    PyObject *pyMethodName = methodNameCache[flag];     // borrowed
+    if (pyMethodName == nullptr) {
+        pyMethodName = Shiboken::String::getSnakeCaseName(methodName, flag);
+        methodNameCache[flag] = pyMethodName;
+    }
+
     if (wrapper->ob_dict) {
-        PyObject *method = PyDict_GetItemString(wrapper->ob_dict, methodName);
+        PyObject *method = PyDict_GetItem(wrapper->ob_dict, pyMethodName);
         if (method) {
             Py_INCREF(reinterpret_cast<PyObject *>(method));
             return method;
         }
     }
 
-    Shiboken::AutoDecRef pyMethodName(Shiboken::String::fromCString(methodName));
     PyObject *method = PyObject_GetAttr(reinterpret_cast<PyObject *>(wrapper), pyMethodName);
 
-    if (method && PyMethod_Check(method)
-        && PyMethod_GET_SELF(method) == reinterpret_cast<PyObject *>(wrapper)) {
+    // PYSIDE-198: Support for Nuitka compiled methods.
+    bool isMethod = method && PyMethod_Check(method);
+    bool isCompiled = !(   isMethod
+                        || Py_TYPE(method) == &PyCFunction_Type
+                        || Py_TYPE(method)->tp_call == nullptr);
+    Shiboken::AutoDecRef meth_self(PyObject_GetAttr(method, Shiboken::PyMagicName::self()));
+    bool wrapsParent = meth_self.object() == reinterpret_cast<PyObject *>(wrapper);
+    if ((isMethod && wrapsParent) || isCompiled) {
         PyObject *defaultMethod;
         PyObject *mro = Py_TYPE(wrapper)->tp_mro;
 
         // The first class in the mro (index 0) is the class being checked and it should not be tested.
         // The last class in the mro (size - 1) is the base Python object class which should not be tested also.
-        for (int i = 1; i < PyTuple_GET_SIZE(mro) - 1; i++) {
-            auto *parent = reinterpret_cast<PyTypeObject *>(PyTuple_GET_ITEM(mro, i));
+        for (int idx = 1; idx < PyTuple_GET_SIZE(mro) - 1; ++idx) {
+            auto *parent = reinterpret_cast<PyTypeObject *>(PyTuple_GET_ITEM(mro, idx));
             if (parent->tp_dict) {
                 defaultMethod = PyDict_GetItem(parent->tp_dict, pyMethodName);
                 if (defaultMethod && PyMethod_GET_FUNCTION(method) != defaultMethod)

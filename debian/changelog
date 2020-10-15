@@ -1,10 +1,10 @@
-pyside2 (5.15.0-4) UNRELEASED; urgency=medium
+pyside2 (5.15.0-4) unstable; urgency=medium
 
-  [ Dmitry Shachnev ]
+  * Team upload.
   * Drop preload-libglx-mesa.patch, not needed with glibc ≥ 2.31-1.
   * Backport upstream patch to add support for Python 3.9 (closes: #972194).
 
- -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Tue, 14 Jul 2020 16:38:40 +0300
+ -- Dmitry Shachnev <mitya57@debian.org>  Thu, 15 Oct 2020 20:06:52 +0300
 
 pyside2 (5.15.0-3) unstable; urgency=medium
 

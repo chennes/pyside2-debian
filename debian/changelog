@@ -1,5 +1,7 @@
 pyside2 (5.15.0-5) UNRELEASED; urgency=medium
 
+  [ Dmitry Shachnev ]
+  * Run tests with QSG_NO_DEPTH_BUFFER=1 on mips64el (see #868745).
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Mon, 19 Oct 2020 21:45:23 +0300
 

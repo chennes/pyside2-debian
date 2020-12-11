@@ -8,6 +8,7 @@ pyside2 (5.15.0-6) UNRELEASED; urgency=medium
   [ Dmitry Shachnev ]
   * Drop ftbfs-old-qt.patch. Not needed since Debian has Qt 5.15.
   * Stop hardcoding py3.8 in debian/shiboken2-doc.docs (closes: #976900).
+  * Blacklist QtWidgets::bug_307 test for now (closes: #976516).
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Fri, 11 Dec 2020 15:37:19 +0300
 

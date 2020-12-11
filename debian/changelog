@@ -5,6 +5,9 @@ pyside2 (5.15.0-6) UNRELEASED; urgency=medium
     + python-pyside2-doc, shiboken2-doc: Add Multi-Arch: foreign.
     + libshiboken2-dev, python3-pyside2.qt*: Add Multi-Arch: same.
 
+  [ Dmitry Shachnev ]
+  * Drop ftbfs-old-qt.patch. Not needed since Debian has Qt 5.15.
+
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Fri, 11 Dec 2020 15:37:19 +0300
 
 pyside2 (5.15.0-5) unstable; urgency=medium

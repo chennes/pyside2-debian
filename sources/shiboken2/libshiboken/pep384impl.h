@@ -98,8 +98,8 @@ typedef struct _typeobject {
     void *X13; // hashfunc tp_hash;
     ternaryfunc tp_call;
     reprfunc tp_str;
-    void *X16; // getattrofunc tp_getattro;
-    void *X17; // setattrofunc tp_setattro;
+    getattrofunc tp_getattro;
+    setattrofunc tp_setattro;
     void *X18; // PyBufferProcs *tp_as_buffer;
     unsigned long tp_flags;
     void *X20; // const char *tp_doc;
@@ -110,12 +110,12 @@ typedef struct _typeobject {
     void *X25; // getiterfunc tp_iter;
     iternextfunc tp_iternext;
     struct PyMethodDef *tp_methods;
-    void *X28; // struct PyMemberDef *tp_members;
+    struct PyMemberDef *tp_members;
     struct PyGetSetDef *tp_getset;
     struct _typeobject *tp_base;
     PyObject *tp_dict;
     descrgetfunc tp_descr_get;
-    void *X33; // descrsetfunc tp_descr_set;
+    descrsetfunc tp_descr_set;
     Py_ssize_t tp_dictoffset;
     initproc tp_init;
     allocfunc tp_alloc;
@@ -327,7 +327,7 @@ LIBSHIBOKEN_API PyObject *PyRun_String(const char *, int, PyObject *, PyObject *
 // But this is no problem as we check it's validity for every version.
 
 #define PYTHON_BUFFER_VERSION_COMPATIBLE    (PY_VERSION_HEX >= 0x03030000 && \
-                                             PY_VERSION_HEX <  0x0308FFFF)
+                                             PY_VERSION_HEX <  0x0309FFFF)
 #if !PYTHON_BUFFER_VERSION_COMPATIBLE
 # error Please check the buffer compatibility for this python version!
 #endif
@@ -411,23 +411,27 @@ LIBSHIBOKEN_API PyObject *PyMethod_Self(PyObject *);
 /* Bytecode object */
 
 // we have to grab the code object from python
-typedef struct _code PyCodeObject;
+typedef struct _code PepCodeObject;
 
-LIBSHIBOKEN_API int PepCode_Get(PyCodeObject *co, const char *name);
+LIBSHIBOKEN_API int PepCode_Get(PepCodeObject *co, const char *name);
 
-#define PepCode_GET_FLAGS(o)         PepCode_Get(o, "co_flags")
-#define PepCode_GET_ARGCOUNT(o)      PepCode_Get(o, "co_argcount")
+#  define PepCode_GET_FLAGS(o)         PepCode_Get(o, "co_flags")
+#  define PepCode_GET_ARGCOUNT(o)      PepCode_Get(o, "co_argcount")
 
 /* Masks for co_flags above */
-#define CO_OPTIMIZED    0x0001
-#define CO_NEWLOCALS    0x0002
-#define CO_VARARGS      0x0004
-#define CO_VARKEYWORDS  0x0008
-#define CO_NESTED       0x0010
-#define CO_GENERATOR    0x0020
+#  define CO_OPTIMIZED    0x0001
+#  define CO_NEWLOCALS    0x0002
+#  define CO_VARARGS      0x0004
+#  define CO_VARKEYWORDS  0x0008
+#  define CO_NESTED       0x0010
+#  define CO_GENERATOR    0x0020
+
 #else
-#define PepCode_GET_FLAGS(o)         ((o)->co_flags)
-#define PepCode_GET_ARGCOUNT(o)      ((o)->co_argcount)
+
+#  define PepCodeObject                PyCodeObject
+#  define PepCode_GET_FLAGS(o)         ((o)->co_flags)
+#  define PepCode_GET_ARGCOUNT(o)      ((o)->co_argcount)
+
 #endif
 
 /*****************************************************************************
@@ -530,6 +534,21 @@ extern LIBSHIBOKEN_API PyTypeObject *PepMethodDescr_TypePtr;
 #if PY_VERSION_HEX < 0x03070000 || defined(Py_LIMITED_API)
 LIBSHIBOKEN_API PyObject *PyImport_GetModule(PyObject *name);
 #endif // PY_VERSION_HEX < 0x03070000 || defined(Py_LIMITED_API)
+
+// Evaluate a script and return the variable `result`
+LIBSHIBOKEN_API PyObject *PepRun_GetResult(const char *command);
+
+/*****************************************************************************
+ *
+ * Python 2 incompatibilities
+ *
+ * This is incompatibly implemented as macro in Python 2.
+ */
+#if PY_VERSION_HEX < 0x03000000
+extern LIBSHIBOKEN_API PyObject *PepMapping_Items(PyObject *o);
+#else
+#define PepMapping_Items PyMapping_Items
+#endif
 
 /*****************************************************************************
  *

@@ -67,14 +67,17 @@ static inline QString flagsAttribute() { return QStringLiteral("flags"); }
 static inline QString forceAbstractAttribute() { return QStringLiteral("force-abstract"); }
 static inline QString forceIntegerAttribute() { return QStringLiteral("force-integer"); }
 static inline QString formatAttribute() { return QStringLiteral("format"); }
+static inline QString generateUsingAttribute() { return QStringLiteral("generate-using"); }
 static inline QString classAttribute() { return QStringLiteral("class"); }
 static inline QString generateAttribute() { return QStringLiteral("generate"); }
+static inline QString generateGetSetDefAttribute() { return QStringLiteral("generate-getsetdef"); }
 static inline QString genericClassAttribute() { return QStringLiteral("generic-class"); }
 static inline QString indexAttribute() { return QStringLiteral("index"); }
 static inline QString invalidateAfterUseAttribute() { return QStringLiteral("invalidate-after-use"); }
 static inline QString locationAttribute() { return QStringLiteral("location"); }
 static inline QString modifiedTypeAttribute() { return QStringLiteral("modified-type"); }
 static inline QString modifierAttribute() { return QStringLiteral("modifier"); }
+static inline QString overloadNumberAttribute() { return QStringLiteral("overload-number"); }
 static inline QString ownershipAttribute() { return QStringLiteral("owner"); }
 static inline QString packageAttribute() { return QStringLiteral("package"); }
 static inline QString positionAttribute() { return QStringLiteral("position"); }
@@ -364,6 +367,7 @@ ENUM_LOOKUP_BEGIN(StackElement::ElementType, Qt::CaseInsensitive,
         {u"object-type", StackElement::ObjectTypeEntry},
         {u"parent", StackElement::ParentOwner},
         {u"primitive-type", StackElement::PrimitiveTypeEntry},
+        {u"property", StackElement::Property},
         {u"reference-count", StackElement::ReferenceCount},
         {u"reject-enum-value", StackElement::RejectEnumValue},
         {u"rejection", StackElement::Rejection},
@@ -501,7 +505,7 @@ QString TypeSystemEntityResolver::resolveUndeclaredEntity(const QString &name)
 
 TypeSystemParser::TypeSystemParser(TypeDatabase *database, bool generate) :
     m_database(database),
-    m_generate(generate ? TypeEntry::GenerateAll : TypeEntry::GenerateForSubclass)
+    m_generate(generate ? TypeEntry::GenerateCode : TypeEntry::GenerateForSubclass)
 {
 }
 
@@ -769,7 +773,7 @@ bool TypeSystemParser::endElement(const QStringRef &localName)
 
     switch (m_current->type) {
     case StackElement::Root:
-        if (m_generate == TypeEntry::GenerateAll) {
+        if (m_generate == TypeEntry::GenerateCode) {
             TypeDatabase::instance()->addGlobalUserFunctions(m_contextStack.top()->addedFunctions);
             TypeDatabase::instance()->addGlobalUserFunctionModifications(m_contextStack.top()->functionMods);
             for (CustomConversion *customConversion : qAsConst(customConversionsForReview)) {
@@ -784,13 +788,26 @@ bool TypeSystemParser::endElement(const QStringRef &localName)
     case StackElement::InterfaceTypeEntry:
     case StackElement::NamespaceTypeEntry: {
         auto *centry = static_cast<ComplexTypeEntry *>(m_current->entry);
-        centry->setAddedFunctions(m_contextStack.top()->addedFunctions);
-        centry->setFunctionModifications(m_contextStack.top()->functionMods);
-        centry->setFieldModifications(m_contextStack.top()->fieldMods);
-        centry->setCodeSnips(m_contextStack.top()->codeSnips);
-        centry->setDocModification(m_contextStack.top()->docModifications);
+        auto top = m_contextStack.top();
+        centry->setAddedFunctions(top->addedFunctions);
+        centry->setFunctionModifications(top->functionMods);
+        centry->setFieldModifications(top->fieldMods);
+        centry->setCodeSnips(top->codeSnips);
+        centry->setDocModification(top->docModifications);
     }
     break;
+
+    case StackElement::TypedefTypeEntry: {
+        auto *centry = static_cast<TypedefEntry *>(m_current->entry)->target();
+        auto top = m_contextStack.top();
+        centry->setAddedFunctions(centry->addedFunctions() + top->addedFunctions);
+        centry->setFunctionModifications(centry->functionModifications() + top->functionMods);
+        centry->setFieldModifications(centry->fieldModifications() + top->fieldMods);
+        centry->setCodeSnips(centry->codeSnips() + top->codeSnips);
+        centry->setDocModification(centry->docModifications() + top->docModifications);
+    }
+    break;
+
     case StackElement::AddFunction: {
         // Leaving add-function: Assign all modifications to the added function
         StackElementContext *top = m_contextStack.top();
@@ -1018,7 +1035,6 @@ bool TypeSystemParser::importFileElement(const QXmlStreamAttributes &atts)
 
 static bool convertBoolean(QStringView value, const QString &attributeName, bool defaultValue)
 {
-#ifdef QTBUG_69389_FIXED
     if (value.compare(trueAttributeValue(), Qt::CaseInsensitive) == 0
         || value.compare(yesAttributeValue(), Qt::CaseInsensitive) == 0) {
         return true;
@@ -1027,16 +1043,6 @@ static bool convertBoolean(QStringView value, const QString &attributeName, bool
         || value.compare(noAttributeValue(), Qt::CaseInsensitive) == 0) {
         return false;
     }
-#else
-    if (QtPrivate::compareStrings(value, trueAttributeValue(), Qt::CaseInsensitive) == 0
-        || QtPrivate::compareStrings(value, yesAttributeValue(), Qt::CaseInsensitive) == 0) {
-        return true;
-    }
-    if (QtPrivate::compareStrings(value, falseAttributeValue(), Qt::CaseInsensitive) == 0
-        || QtPrivate::compareStrings(value, noAttributeValue(), Qt::CaseInsensitive) == 0) {
-        return false;
-    }
-#endif
     const QString warn = QStringLiteral("Boolean value '%1' not supported in attribute '%2'. Use 'yes' or 'no'. Defaulting to '%3'.")
                                       .arg(value)
                                       .arg(attributeName,
@@ -1374,6 +1380,8 @@ NamespaceTypeEntry *
         } else if (attributeName == generateAttribute()) {
             if (!convertBoolean(attributes->takeAt(i).value(), generateAttribute(), true))
                 visibility = TypeSystem::Visibility::Invisible;
+        } else if (attributeName == generateUsingAttribute()) {
+            result->setGenerateUsing(convertBoolean(attributes->takeAt(i).value(), generateUsingAttribute(), true));
         }
     }
 
@@ -1547,7 +1555,7 @@ void TypeSystemParser::applyComplexTypeAttributes(const QXmlStreamReader &reader
     if (generate)
         ctype->setCodeGeneration(m_generate);
     else
-        ctype->setCodeGeneration(TypeEntry::GenerateForSubclass);
+        ctype->setCodeGeneration(TypeEntry::GenerationDisabled);
 }
 
 bool TypeSystemParser::parseRenameFunction(const QXmlStreamReader &,
@@ -1730,7 +1738,7 @@ bool TypeSystemParser::loadTypesystem(const QXmlStreamReader &,
     }
     const bool result =
         m_database->parseFile(typeSystemName, m_currentPath, generateChild
-                              && m_generate == TypeEntry::GenerateAll);
+                              && m_generate == TypeEntry::GenerateCode);
     if (!result)
         m_error = QStringLiteral("Failed to parse: '%1'").arg(typeSystemName);
     return result;
@@ -2159,6 +2167,18 @@ bool TypeSystemParser::parseModifyField(const QXmlStreamReader &reader,
     return true;
 }
 
+static bool parseOverloadNumber(const QXmlStreamAttribute &attribute, int *overloadNumber,
+                                QString *errorMessage)
+{
+    bool ok;
+    *overloadNumber = attribute.value().toInt(&ok);
+    if (!ok || *overloadNumber < 0) {
+        *errorMessage = msgInvalidAttributeValue(attribute);
+        return false;
+    }
+    return true;
+}
+
 bool TypeSystemParser::parseAddFunction(const QXmlStreamReader &,
                                const StackElement &topElement,
                                QXmlStreamAttributes *attributes)
@@ -2172,6 +2192,7 @@ bool TypeSystemParser::parseAddFunction(const QXmlStreamReader &,
     QString returnType = QLatin1String("void");
     bool staticFunction = false;
     QString access;
+    int overloadNumber = TypeSystem::OverloadNumberUnset;
     for (int i = attributes->size() - 1; i >= 0; --i) {
         const QStringRef name = attributes->at(i).qualifiedName();
         if (name == QLatin1String("signature")) {
@@ -2183,6 +2204,9 @@ bool TypeSystemParser::parseAddFunction(const QXmlStreamReader &,
                                             staticAttribute(), false);
         } else if (name == accessAttribute()) {
             access = attributes->takeAt(i).value().toString();
+        } else if (name == overloadNumberAttribute()) {
+            if (!parseOverloadNumber(attributes->takeAt(i), &overloadNumber, &m_error))
+                return false;
         }
     }
 
@@ -2218,10 +2242,45 @@ bool TypeSystemParser::parseAddFunction(const QXmlStreamReader &,
         m_contextStack.top()->functionMods.size();
 
     FunctionModification mod;
+    mod.setOverloadNumber(overloadNumber);
     if (!mod.setSignature(m_currentSignature, &m_error))
         return false;
     mod.setOriginalSignature(originalSignature);
     m_contextStack.top()->functionMods << mod;
+    return true;
+}
+
+bool TypeSystemParser::parseProperty(const QXmlStreamReader &, const StackElement &topElement,
+                                     QXmlStreamAttributes *attributes)
+{
+    if ((topElement.type & StackElement::ComplexTypeEntryMask) == 0) {
+        m_error = QString::fromLatin1("Add property requires a complex type as parent"
+                                      ", was=%1").arg(topElement.type, 0, 16);
+        return false;
+    }
+
+    TypeSystemProperty property;
+    for (int i = attributes->size() - 1; i >= 0; --i) {
+        const auto name = attributes->at(i).qualifiedName();
+        if (name == nameAttribute()) {
+            property.name = attributes->takeAt(i).value().toString();
+        } else if (name == QLatin1String("get")) {
+            property.read = attributes->takeAt(i).value().toString();
+        } else if (name == QLatin1String("type")) {
+            property.type = attributes->takeAt(i).value().toString();
+        } else if (name == QLatin1String("set")) {
+            property.write = attributes->takeAt(i).value().toString();
+        } else if (name == generateGetSetDefAttribute()) {
+            property.generateGetSetDef =
+                convertBoolean(attributes->takeAt(i).value(),
+                               generateGetSetDefAttribute(), false);
+        }
+    }
+    if (!property.isValid()) {
+        m_error = QLatin1String("<property> element is missing required attibutes (name/type/get).");
+        return false;
+    }
+    static_cast<ComplexTypeEntry *>(topElement.entry)->addProperty(property);
     return true;
 }
 
@@ -2242,6 +2301,7 @@ bool TypeSystemParser::parseModifyFunction(const QXmlStreamReader &reader,
     QString association;
     bool deprecated = false;
     bool isThread = false;
+    int overloadNumber = TypeSystem::OverloadNumberUnset;
     TypeSystem::ExceptionHandling exceptionHandling = TypeSystem::ExceptionHandling::Unspecified;
     TypeSystem::AllowThread allowThread = TypeSystem::AllowThread::Unspecified;
     for (int i = attributes->size() - 1; i >= 0; --i) {
@@ -2278,6 +2338,9 @@ bool TypeSystemParser::parseModifyFunction(const QXmlStreamReader &reader,
                 qCWarning(lcShiboken, "%s",
                           qPrintable(msgInvalidAttributeValue(attribute)));
             }
+        } else if (name == overloadNumberAttribute()) {
+            if (!parseOverloadNumber(attributes->takeAt(i), &overloadNumber, &m_error))
+                return false;
         } else if (name == virtualSlotAttribute()) {
             qCWarning(lcShiboken, "%s",
                       qPrintable(msgUnimplementedAttributeWarning(reader, name)));
@@ -2301,6 +2364,7 @@ bool TypeSystemParser::parseModifyFunction(const QXmlStreamReader &reader,
         return false;
     mod.setOriginalSignature(originalSignature);
     mod.setExceptionHandling(exceptionHandling);
+    mod.setOverloadNumber(overloadNumber);
     m_currentSignature = signature;
 
     if (!access.isEmpty()) {
@@ -2690,7 +2754,7 @@ bool TypeSystemParser::startElement(const QXmlStreamReader &reader)
     auto *element = new StackElement(m_current);
     element->type = elementType;
 
-    if (element->type == StackElement::Root && m_generate == TypeEntry::GenerateAll)
+    if (element->type == StackElement::Root && m_generate == TypeEntry::GenerateCode)
         customConversionsForReview.clear();
 
     if (element->type == StackElement::CustomMetaConstructor
@@ -2983,6 +3047,10 @@ bool TypeSystemParser::startElement(const QXmlStreamReader &reader)
             break;
         case StackElement::AddFunction:
             if (!parseAddFunction(reader, topElement, &attributes))
+                return false;
+            break;
+        case StackElement::Property:
+            if (!parseProperty(reader, topElement, &attributes))
                 return false;
             break;
         case StackElement::ModifyFunction:

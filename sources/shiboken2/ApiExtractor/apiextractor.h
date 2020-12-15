@@ -81,10 +81,10 @@ public:
     LanguageLevel languageLevel() const;
     void setLanguageLevel(LanguageLevel languageLevel);
 
-    AbstractMetaEnumList globalEnums() const;
-    AbstractMetaFunctionList globalFunctions() const;
-    AbstractMetaClassList classes() const;
-    AbstractMetaClassList smartPointers() const;
+    const AbstractMetaEnumList &globalEnums() const;
+    const AbstractMetaFunctionList &globalFunctions() const;
+    const AbstractMetaClassList &classes() const;
+    const AbstractMetaClassList &smartPointers() const;
     AbstractMetaClassList classesTopologicalSorted(const Dependencies &additionalDependencies = Dependencies()) const;
     PrimitiveTypeEntryList primitiveTypes() const;
     ContainerTypeEntryList containerTypes() const;
@@ -93,7 +93,7 @@ public:
 
     int classCount() const;
 
-    bool run();
+    bool run(bool usePySideExtensions);
 private:
     QString m_typeSystemFileName;
     QFileInfoList m_cppFileNames;

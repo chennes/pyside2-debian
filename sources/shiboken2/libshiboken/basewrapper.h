@@ -97,12 +97,13 @@ typedef void (*SubTypeInitHook)(SbkObjectType *, PyObject *, PyObject *);
 typedef PyObject *(*SelectableFeatureHook)(PyTypeObject *);
 LIBSHIBOKEN_API void initSelectableFeature(SelectableFeatureHook func);
 
-// PYSIDE-1019: Publish the start of setattro.
-LIBSHIBOKEN_API void SbkObject_NotifySetAttr(PyObject *obj, PyObject *name, PyObject *value);
-
 // PYSIDE-1019: Get access to PySide reserved bits.
 LIBSHIBOKEN_API int SbkObjectType_GetReserved(PyTypeObject *type);
 LIBSHIBOKEN_API void SbkObjectType_SetReserved(PyTypeObject *type, int value);
+
+// PYSIDE-1019: Get access to PySide property strings.
+LIBSHIBOKEN_API const char **SbkObjectType_GetPropertyStrings(PyTypeObject *type);
+LIBSHIBOKEN_API void SbkObjectType_SetPropertyStrings(PyTypeObject *type, const char **strings);
 
 
 extern LIBSHIBOKEN_API PyTypeObject *SbkObjectType_TypeF(void);
@@ -233,7 +234,6 @@ LIBSHIBOKEN_API SbkObjectType *introduceWrapperType(PyObject *enclosingObject,
                                                     const char *typeName,
                                                     const char *originalName,
                                                     PyType_Spec *typeSpec,
-                                                    const char *signatureStrings[],
                                                     ObjectDestructor cppObjDtor,
                                                     SbkObjectType *baseType,
                                                     PyObject *baseTypes,

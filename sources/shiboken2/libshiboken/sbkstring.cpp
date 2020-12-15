@@ -42,6 +42,7 @@
 #include "autodecref.h"
 
 #include <vector>
+#include <unordered_set>
 
 namespace Shiboken
 {
@@ -232,7 +233,7 @@ Py_ssize_t len(PyObject *str)
 //     PyObject *attr = PyObject_GetAttr(obj, name());
 //
 
-using StaticStrings = std::vector<PyObject *>;
+using StaticStrings = std::unordered_set<PyObject *>;
 
 static void finalizeStaticStrings();    // forward
 
@@ -244,10 +245,12 @@ static StaticStrings &staticStrings()
 
 static void finalizeStaticStrings()
 {
-    auto &list = staticStrings();
-    for (PyObject *ob : list)
+    auto &set = staticStrings();
+    for (PyObject *ob : set) {
+        Py_REFCNT(ob) = 1;
         Py_DECREF(ob);
-    list.clear();
+    }
+    set.clear();
 }
 
 PyObject *createStaticString(const char *str)
@@ -267,7 +270,16 @@ PyObject *createStaticString(const char *str)
         PyErr_Print();
         Py_FatalError("unexpected error in createStaticString()");
     }
-    staticStrings().push_back(result);
+    auto it = staticStrings().find(result);
+    if (it == staticStrings().end())
+        staticStrings().insert(result);
+    /*
+     * Note: We always add one reference even if we have a new string.
+     *       This makes the strings immortal, and we are safe if someone
+     *       uses AutoDecRef, although the set cannot cope with deletions.
+     *       The exit handler cleans that up, anyway.
+     */
+    Py_INCREF(result);
     return result;
 }
 
@@ -313,6 +325,14 @@ PyObject *getSnakeCaseName(const char *name, bool lower)
         }
     }
     return createStaticString(new_name);
+}
+
+PyObject *getSnakeCaseName(PyObject *name, bool lower)
+{
+    // This is all static strings, not refcounted.
+    if (lower)
+        return getSnakeCaseName(toCString(name), lower);
+    return name;
 }
 
 } // namespace String

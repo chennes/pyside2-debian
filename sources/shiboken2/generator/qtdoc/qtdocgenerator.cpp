@@ -27,8 +27,10 @@
 ****************************************************************************/
 
 #include "qtdocgenerator.h"
+#include "ctypenames.h"
 #include <abstractmetalang.h>
 #include <messages.h>
+#include <propertyspec.h>
 #include <reporthandler.h>
 #include <typesystem.h>
 #include <qtdocparser.h>
@@ -409,8 +411,7 @@ QString QtXmlToSphinx::expandFunction(const QString& function) const
     const AbstractMetaClass *metaClass = nullptr;
     if (firstDot != -1) {
         const QStringRef className = function.leftRef(firstDot);
-        const AbstractMetaClassList &classes = m_generator->classes();
-        for (const AbstractMetaClass *cls : classes) {
+        for (const AbstractMetaClass *cls : m_generator->classes()) {
             if (cls->name() == className) {
                 metaClass = cls;
                 break;
@@ -429,8 +430,7 @@ QString QtXmlToSphinx::resolveContextForMethod(const QString& methodName) const
     const QStringRef currentClass = m_context.splitRef(QLatin1Char('.')).constLast();
 
     const AbstractMetaClass *metaClass = nullptr;
-    const AbstractMetaClassList &classes = m_generator->classes();
-    for (const AbstractMetaClass *cls : classes) {
+    for (const AbstractMetaClass *cls : m_generator->classes()) {
         if (cls->name() == currentClass) {
             metaClass = cls;
             break;
@@ -1762,8 +1762,7 @@ void QtDocGenerator::writeEnums(QTextStream& s, const AbstractMetaClass* cppClas
 {
     static const QString section_title = QLatin1String(".. attribute:: ");
 
-    const AbstractMetaEnumList &enums = cppClass->enums();
-    for (AbstractMetaEnum *en : enums) {
+    for (AbstractMetaEnum *en : cppClass->enums()) {
         s << section_title << cppClass->fullName() << '.' << en->name() << Qt::endl << Qt::endl;
         writeFormattedText(s, en->documentation().value(), cppClass);
         const auto version = versionOf(en->typeEntry());
@@ -2006,10 +2005,7 @@ QString QtDocGenerator::functionSignature(const AbstractMetaClass* cppClass, con
 
 QString QtDocGenerator::translateToPythonType(const AbstractMetaType* type, const AbstractMetaClass* cppClass)
 {
-    static const QStringList nativeTypes = {
-        QLatin1String("bool"),
-        QLatin1String("float"),
-        QLatin1String("int"),
+    static const QStringList nativeTypes = {boolT(), floatT(), intT(),
         QLatin1String("object"),
         QLatin1String("str")
     };
@@ -2022,14 +2018,14 @@ QString QtDocGenerator::translateToPythonType(const AbstractMetaType* type, cons
         { QLatin1String("QString"), QLatin1String("str") },
         { QLatin1String("uchar"), QLatin1String("str") },
         { QLatin1String("QStringList"), QLatin1String("list of strings") },
-        { QLatin1String("QVariant"), QLatin1String("object") },
-        { QLatin1String("quint32"), QLatin1String("int") },
-        { QLatin1String("uint32_t"), QLatin1String("int") },
-        { QLatin1String("quint64"), QLatin1String("int") },
-        { QLatin1String("qint64"), QLatin1String("int") },
-        { QLatin1String("size_t"), QLatin1String("int") },
-        { QLatin1String("int64_t"), QLatin1String("int") },
-        { QLatin1String("qreal"), QLatin1String("float") }
+        { qVariantT(), QLatin1String("object") },
+        { QLatin1String("quint32"), intT() },
+        { QLatin1String("uint32_t"), intT() },
+        { QLatin1String("quint64"), intT() },
+        { QLatin1String("qint64"), intT() },
+        { QLatin1String("size_t"), intT() },
+        { QLatin1String("int64_t"), intT() },
+        { QLatin1String("qreal"), floatT() }
     };
     const auto found = typeMap.find(name);
     if (found != typeMap.end())
@@ -2038,10 +2034,10 @@ QString QtDocGenerator::translateToPythonType(const AbstractMetaType* type, cons
     QString strType;
     if (type->isConstant() && name == QLatin1String("char") && type->indirections() == 1) {
         strType = QLatin1String("str");
-    } else if (name.startsWith(QLatin1String("unsigned short"))) {
-        strType = QLatin1String("int");
-    } else if (name.startsWith(QLatin1String("unsigned "))) { // uint and ulong
-        strType = QLatin1String("int");
+    } else if (name.startsWith(unsignedShortT())) {
+        strType = intT();
+    } else if (name.startsWith(unsignedT())) { // uint and ulong
+        strType = intT();
     } else if (type->isContainer()) {
         QString strType = translateType(type, cppClass, Options(ExcludeConst) | ExcludeReference);
         strType.remove(QLatin1Char('*'));
@@ -2085,7 +2081,7 @@ void QtDocGenerator::writeFunctionParametersType(QTextStream &s, const AbstractM
         writeParameterType(s, cppClass, arg);
     }
 
-    if (!func->isConstructor() && func->type()) {
+    if (!func->isConstructor() && !func->isVoid()) {
 
         QString retType;
         // check if the return type was modified
@@ -2251,18 +2247,13 @@ void QtDocGenerator::writeModuleDocumentation()
 
         writeFancyToc(s, it.value());
 
-        s << INDENT << ".. container:: hide\n\n";
-        {
-            Indentation indentation(INDENT);
-            s << INDENT << ".. toctree::\n";
-            Indentation deeperIndentation(INDENT);
-            s << INDENT << ":maxdepth: 1\n\n";
-            for (const QString &className : qAsConst(it.value()))
-                s << INDENT << className << Qt::endl;
-            s << Qt::endl << Qt::endl;
-        }
-
-        s << "Detailed Description\n--------------------\n\n";
+        s << INDENT << ".. container:: hide\n\n" << indent(INDENT)
+            << INDENT << ".. toctree::\n" << indent(INDENT)
+            << INDENT << ":maxdepth: 1\n\n";
+        for (const QString &className : qAsConst(it.value()))
+            s << INDENT << className << Qt::endl;
+        s << "\n\n" << outdent(INDENT) << outdent(INDENT)
+            << "Detailed Description\n--------------------\n\n";
 
         // module doc is always wrong and C++istic, so go straight to the extra directory!
         QFile moduleDoc(m_extraSectionDir + QLatin1Char('/') + moduleName.mid(lastIndex + 1) + QLatin1String(".rst"));

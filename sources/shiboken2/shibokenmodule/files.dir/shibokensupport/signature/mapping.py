@@ -264,6 +264,7 @@ type_map.update({
     "qulonglong": int,
     "QVariant": Variant,
     "QVector": typing.List,
+    "QSharedPointer": typing.Tuple,
     "real": float,
     "short": int,
     "signed char": int,
@@ -453,14 +454,6 @@ def init_PySide2_QtCore():
         "PyByteArray": bytearray,
         "PyBytes": bytes,
         "QDeadlineTimer(QDeadlineTimer.Forever)": Instance("PySide2.QtCore.QDeadlineTimer"),
-        "PySide2.QtCore.QCborStreamReader.StringResult[PySide2.QtCore.QByteArray]":
-            PySide2.QtCore.QCborStringResultByteArray,
-        "PySide2.QtCore.QCborStreamReader.StringResult[QString]":
-            PySide2.QtCore.QCborStringResultString,
-        "PySide2.QtCore.QCborStreamReader.QCborStringResultByteArray":
-            PySide2.QtCore.QCborStringResultByteArray,  # 5.14, why?
-        "PySide2.QtCore.QCborStreamReader.QCborStringResultString":
-            PySide2.QtCore.QCborStringResultString,  # 5.14, why?
         "PySide2.QtCore.QUrl.ComponentFormattingOptions":
             PySide2.QtCore.QUrl.ComponentFormattingOption, # mismatch option/enum, why???
         "PyUnicode": typing.Text,
@@ -498,6 +491,16 @@ def init_PySide2_QtCore():
     except AttributeError:
         # this does not exist on 5.9 ATM.
         pass
+    return locals()
+
+
+def init_PySide2_QtConcurrent():
+    type_map.update({
+        "PySide2.QtCore.QFuture[QString]":
+        PySide2.QtConcurrent.QFutureQString,
+        "PySide2.QtCore.QFuture[void]":
+        PySide2.QtConcurrent.QFutureVoid,
+    })
     return locals()
 
 

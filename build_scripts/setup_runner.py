@@ -41,18 +41,15 @@ import sys
 import os
 import textwrap
 
+from setuptools import setup  # Import setuptools before distutils
 import distutils.log as log
 
 from build_scripts.config import config
 from build_scripts.main import get_package_version, get_setuptools_extension_modules
 from build_scripts.main import cmd_class_dict
-from build_scripts.options import OPTION
+from build_scripts.options import ADDITIONAL_OPTIONS, OPTION
 from build_scripts.utils import run_process
 
-from setuptools import setup
-
-if OPTION["VERBOSE_BUILD"]:
-    log.set_verbosity(1)
 
 class SetupRunner(object):
     def __init__(self, orig_argv):
@@ -131,7 +128,11 @@ class SetupRunner(object):
                                .format(config.build_type))
 
         # Build everything: shiboken2, shiboken2-generator and PySide2.
-        if config.is_top_level_build_all():
+        help_requested = '--help' in self.sub_argv or '-h' in self.sub_argv
+        if help_requested:
+            self.add_setup_internal_invocation(config.pyside_option_name)
+
+        elif config.is_top_level_build_all():
             self.add_setup_internal_invocation(config.shiboken_module_option_name)
 
             # Reuse the shiboken build for the generator package instead
@@ -160,6 +161,10 @@ class SetupRunner(object):
                     setup.py invocation was: {}
                     """).format(exit_code, cmd_as_string)
                 raise RuntimeError(msg)
+
+        if help_requested:
+            print(ADDITIONAL_OPTIONS)
+
 
     @staticmethod
     def run_setuptools_setup():

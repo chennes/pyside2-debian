@@ -28,6 +28,7 @@
 
 #include "abstractmetabuilder_p.h"
 #include "messages.h"
+#include "propertyspec.h"
 #include "reporthandler.h"
 #include "typedatabase.h"
 
@@ -134,27 +135,27 @@ AbstractMetaBuilder::~AbstractMetaBuilder()
     delete d;
 }
 
-AbstractMetaClassList AbstractMetaBuilder::classes() const
+const AbstractMetaClassList &AbstractMetaBuilder::classes() const
 {
     return d->m_metaClasses;
 }
 
-AbstractMetaClassList AbstractMetaBuilder::templates() const
+const AbstractMetaClassList &AbstractMetaBuilder::templates() const
 {
     return d->m_templates;
 }
 
-AbstractMetaClassList AbstractMetaBuilder::smartPointers() const
+const AbstractMetaClassList &AbstractMetaBuilder::smartPointers() const
 {
     return d->m_smartPointers;
 }
 
-AbstractMetaFunctionList AbstractMetaBuilder::globalFunctions() const
+const AbstractMetaFunctionList &AbstractMetaBuilder::globalFunctions() const
 {
     return d->m_globalFunctions;
 }
 
-AbstractMetaEnumList AbstractMetaBuilder::globalEnums() const
+const AbstractMetaEnumList &AbstractMetaBuilder::globalEnums() const
 {
     return d->m_globalEnums;
 }
@@ -174,12 +175,12 @@ void AbstractMetaBuilderPrivate::checkFunctionModifications()
         const TypeEntry *entry = it.value();
         if (!entry)
             continue;
-        if (!entry->isComplex() || entry->codeGeneration() == TypeEntry::GenerateNothing)
+        if (!entry->isComplex() || !entry->generateCode())
             continue;
 
         auto centry = static_cast<const ComplexTypeEntry *>(entry);
 
-        if (!(centry->codeGeneration() & TypeEntry::GenerateTargetLang))
+        if (!centry->generateCode())
             continue;
 
         FunctionModificationList modifications = centry->functionModifications();
@@ -289,7 +290,7 @@ void AbstractMetaBuilderPrivate::traverseOperatorFunction(const FunctionModelIte
     if (arguments.size() == 1) {
         unaryOperator = true;
     } else if (!baseoperandClass
-               || !(baseoperandClass->typeEntry()->codeGeneration() & TypeEntry::GenerateTargetLang)) {
+               || !baseoperandClass->typeEntry()->generateCode()) {
         baseoperandClass = argumentToClass(arguments.at(1), currentClass);
         firstArgumentIsSelf = false;
     } else {
@@ -513,6 +514,8 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
     for (AbstractMetaClass *cls : qAsConst(m_metaClasses)) {
         if (!cls->isNamespace()) {
             setupInheritance(cls);
+            if (cls->templateBaseClass())
+                inheritTemplateFunctions(cls);
             if (!cls->hasVirtualDestructor() && cls->baseClass()
                 && cls->baseClass()->hasVirtualDestructor())
                 cls->setHasVirtualDestructor(true);
@@ -550,7 +553,7 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
                 && !types->shouldDropTypeEntry(entry->qualifiedCppName())
                 && !entry->isContainer()
                 && !entry->isCustom()
-                && (entry->generateCode() & TypeEntry::GenerateTargetLang)
+                && entry->generateCode()
                 && !AbstractMetaClass::findClass(m_metaClasses, entry)) {
                 qCWarning(lcShiboken, "%s", qPrintable(msgTypeNotDefined(entry)));
             } else if (entry->generateCode() && entry->type() == TypeEntry::FunctionType) {
@@ -569,7 +572,7 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
                                   qPrintable(msgGlobalFunctionNotDefined(fte, signature)));
                     }
                 }
-            } else if (entry->isEnum() && (entry->generateCode() & TypeEntry::GenerateTargetLang)) {
+            } else if (entry->isEnum() && entry->generateCode()) {
                 auto enumEntry = static_cast<const EnumTypeEntry *>(entry);
                 const QString name = enumEntry->targetLangQualifier();
                 AbstractMetaClass *cls = AbstractMetaClass::findClass(m_metaClasses, name);
@@ -670,6 +673,7 @@ void AbstractMetaBuilderPrivate::traverseDom(const FileModelItem &dom)
     }
 
     m_itemToClass.clear();
+    m_typeSystemTypeDefs.clear();
 
     ReportHandler::endProgress();
 }
@@ -854,8 +858,7 @@ AbstractMetaEnum *AbstractMetaBuilderPrivate::traverseEnum(const EnumModelItem &
         return nullptr;
     }
 
-    const bool rejectionWarning = !enclosing
-        || (enclosing->typeEntry()->codeGeneration() & TypeEntry::GenerateTargetLang);
+    const bool rejectionWarning = !enclosing || enclosing->typeEntry()->generateCode();
 
     if (!typeEntry) {
         if (rejectionWarning)
@@ -991,6 +994,23 @@ void AbstractMetaBuilderPrivate::traverseTypesystemTypedefs()
         *metaClass += AbstractMetaAttributes::Public;
         fillAddedFunctions(metaClass);
         addAbstractMetaClass(metaClass, nullptr);
+        // Ensure base classes are set up when traversing functions for the
+        // type to be resolved.
+        if (setupInheritance(metaClass)) {
+            // Create an entry to look up up types obtained from parsing
+            // functions in reverse. As opposed to container specializations,
+            // which are generated into every instantiating module (indicated
+            // by ContainerTypeEntry::targetLangPackage() being empty), the
+            // correct index array of the module needs to be found by reverse
+            // mapping the instantiations to the typedef entry.
+            // Synthesize a AbstractMetaType which would be found by an
+            // instantiation.
+            auto sourceType = new AbstractMetaType;
+            sourceType->setTypeEntry(metaClass->templateBaseClass()->typeEntry());
+            sourceType->setInstantiations(metaClass->templateBaseClassInstantiations());
+            sourceType->decideUsagePattern();
+            m_typeSystemTypeDefs.append({AbstractMetaTypeCPtr(sourceType), metaClass});
+        }
     }
 }
 
@@ -1184,7 +1204,7 @@ AbstractMetaField *AbstractMetaBuilderPrivate::traverseField(const VariableModel
 
     if (!metaType) {
         const QString type = TypeInfo::resolveType(fieldType, currentScope()).qualifiedName().join(colonColon());
-        if (cls->typeEntry()->codeGeneration() & TypeEntry::GenerateTargetLang) {
+        if (cls->typeEntry()->generateCode()) {
              qCWarning(lcShiboken, "%s",
                        qPrintable(msgSkippingField(field, cls->name(), type)));
         }
@@ -1258,8 +1278,8 @@ void AbstractMetaBuilderPrivate::fixReturnTypeOfConversionOperator(AbstractMetaF
     if (!retType)
         return;
 
-    auto *metaType = new AbstractMetaType;
-    metaType->setTypeEntry(retType);
+    auto metaType = new AbstractMetaType(retType);
+    metaType->decideUsagePattern();
     metaFunction->replaceType(metaType);
 }
 
@@ -1292,7 +1312,7 @@ void AbstractMetaBuilderPrivate::traverseFunctions(ScopeModelItem scopeItem,
         classFunctionList(scopeItem, &constructorAttributes, metaClass);
     metaClass->setAttributes(metaClass->attributes() | constructorAttributes);
 
-    for (AbstractMetaFunction *metaFunction : functions){
+    for (AbstractMetaFunction *metaFunction : functions) {
         metaFunction->setOriginalAttributes(metaFunction->attributes());
         if (metaClass->isNamespace())
             *metaFunction += AbstractMetaAttributes::Static;
@@ -1300,21 +1320,23 @@ void AbstractMetaBuilderPrivate::traverseFunctions(ScopeModelItem scopeItem,
         QPropertySpec *read = nullptr;
         if (!metaFunction->isSignal() && (read = metaClass->propertySpecForRead(metaFunction->name()))) {
             // Property reader must be in the form "<type> name()"
-            if (metaFunction->type() && (read->type() == metaFunction->type()->typeEntry())
+            if (read->typeEntry() == metaFunction->type()->typeEntry()
                 && metaFunction->arguments().isEmpty()) {
                 *metaFunction += AbstractMetaAttributes::PropertyReader;
                 metaFunction->setPropertySpec(read);
             }
         } else if (QPropertySpec *write = metaClass->propertySpecForWrite(metaFunction->name())) {
             // Property setter must be in the form "void name(<type>)"
-            // make sure the function was created with all aguments, some argument can be missing during the pareser because of errors on typesystem
-            if ((!metaFunction->type()) && (metaFunction->arguments().size() == 1) && (write->type() == metaFunction->arguments().at(0)->type()->typeEntry())) {
+            // Make sure the function was created with all arguments; some argument can be
+            // missing during the parsing because of errors in the typesystem.
+            if (metaFunction->isVoid() && metaFunction->arguments().size() == 1
+                && (write->typeEntry() == metaFunction->arguments().at(0)->type()->typeEntry())) {
                 *metaFunction += AbstractMetaAttributes::PropertyWriter;
                 metaFunction->setPropertySpec(write);
             }
         } else if (QPropertySpec *reset = metaClass->propertySpecForReset(metaFunction->name())) {
             // Property resetter must be in the form "void name()"
-            if ((!metaFunction->type()) && metaFunction->arguments().isEmpty()) {
+            if (metaFunction->isVoid() && metaFunction->arguments().isEmpty()) {
                 *metaFunction += AbstractMetaAttributes::PropertyResetter;
                 metaFunction->setPropertySpec(reset);
             }
@@ -1518,16 +1540,13 @@ AbstractMetaFunction* AbstractMetaBuilderPrivate::traverseFunction(const AddedFu
 {
     QString errorMessage;
 
-    AbstractMetaType *returnType = nullptr;
-    if (addedFunc->returnType().name != QLatin1String("void")) {
-        returnType = translateType(addedFunc->returnType(), &errorMessage);
-        if (!returnType) {
-            qCWarning(lcShiboken, "%s",
-                      qPrintable(msgAddedFunctionInvalidReturnType(addedFunc->name(),
-                                                                   addedFunc->returnType().name,
-                                                                   errorMessage)));
-            return nullptr;
-        }
+    AbstractMetaType *returnType = translateType(addedFunc->returnType(), &errorMessage);
+    if (!returnType) {
+        qCWarning(lcShiboken, "%s",
+                  qPrintable(msgAddedFunctionInvalidReturnType(addedFunc->name(),
+                                                               addedFunc->returnType().name,
+                                                               errorMessage)));
+        return nullptr;
     }
 
     auto metaFunction = new AbstractMetaFunction(addedFunc);
@@ -1808,10 +1827,12 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
     QString errorMessage;
     switch (metaFunction->functionType()) {
     case AbstractMetaFunction::DestructorFunction:
+         metaFunction->setType(AbstractMetaType::createVoid());
         break;
     case AbstractMetaFunction::ConstructorFunction:
         metaFunction->setExplicit(functionItem->isExplicit());
         metaFunction->setName(currentClass->name());
+        metaFunction->setType(AbstractMetaType::createVoid());
         break;
     default: {
         TypeInfo returnType = functionItem->type();
@@ -1822,17 +1843,14 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
             return nullptr;
         }
 
-        AbstractMetaType *type = nullptr;
-        if (!returnType.isVoid()) {
-            type = translateType(returnType, currentClass, {}, &errorMessage);
-            if (!type) {
-                const QString reason = msgUnmatchedReturnType(functionItem, errorMessage);
-                qCWarning(lcShiboken, "%s",
-                          qPrintable(msgSkippingFunction(functionItem, originalQualifiedSignatureWithReturn, reason)));
-                m_rejectedFunctions.insert(originalQualifiedSignatureWithReturn, AbstractMetaBuilder::UnmatchedReturnType);
-                delete metaFunction;
-                return nullptr;
-            }
+        AbstractMetaType *type = translateType(returnType, currentClass, {}, &errorMessage);
+        if (!type) {
+            const QString reason = msgUnmatchedReturnType(functionItem, errorMessage);
+            qCWarning(lcShiboken, "%s",
+                      qPrintable(msgSkippingFunction(functionItem, originalQualifiedSignatureWithReturn, reason)));
+            m_rejectedFunctions.insert(originalQualifiedSignatureWithReturn, AbstractMetaBuilder::UnmatchedReturnType);
+            delete metaFunction;
+            return nullptr;
         }
 
         metaFunction->setType(type);
@@ -1866,9 +1884,7 @@ AbstractMetaFunction *AbstractMetaBuilderPrivate::traverseFunction(const Functio
             // unless the function is virtual (since the override in the
             // wrapper can then not correctly be generated).
             if (arg->defaultValue() && !functionItem->isVirtual()) {
-                if (!currentClass
-                    || (currentClass->typeEntry()->codeGeneration()
-                        & TypeEntry::GenerateTargetLang)) {
+                if (!currentClass || currentClass->typeEntry()->generateCode()) {
                     qCWarning(lcShiboken, "%s",
                               qPrintable(msgStrippingArgument(functionItem, i, originalQualifiedSignatureWithReturn, arg)));
                 }
@@ -1967,14 +1983,13 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateType(const AddedFunction:
 {
     Q_ASSERT(!typeInfo.name.isEmpty());
     TypeDatabase* typeDb = TypeDatabase::instance();
-    TypeEntry* type;
 
     QString typeName = typeInfo.name;
 
     if (typeName == QLatin1String("void"))
-        return nullptr;
+        return AbstractMetaType::createVoid();
 
-    type = typeDb->findType(typeName);
+    TypeEntry *type = typeDb->findType(typeName);
     if (!type)
         type = typeDb->findFlagsType(typeName);
 
@@ -1982,13 +1997,21 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateType(const AddedFunction:
     bool isTemplate = false;
     QStringList templateArgs;
     if (!type && typeInfo.name.contains(QLatin1Char('<'))) {
-        const QStringList& parsedType = parseTemplateType(typeInfo.name);
+        QStringList parsedType = parseTemplateType(typeInfo.name);
         if (parsedType.isEmpty()) {
             *errorMessage = QStringLiteral("Template type parsing failed for '%1'").arg(typeInfo.name);
             return nullptr;
         }
-        templateArgs = parsedType.mid(1);
-        isTemplate = (type = typeDb->findContainerType(parsedType[0]));
+        const QString name = parsedType.takeFirst();
+        templateArgs = parsedType;
+        type = typeDb->findContainerType(name);
+        if (!type) { // A template typedef?
+            if (auto candidate = typeDb->findType(name)) {
+                if (candidate->type() == TypeEntry::ObjectType || candidate->type() == TypeEntry::BasicValueType)
+                    type = candidate;
+            }
+        }
+        isTemplate = type != nullptr;
     }
 
     if (!type) {
@@ -2014,23 +2037,21 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateType(const AddedFunction:
     }
 
     // These are only implicit and should not appear in code...
-    auto *metaType = new AbstractMetaType;
-    metaType->setTypeEntry(type);
+    auto *metaType = new AbstractMetaType(type);
     metaType->setIndirections(typeInfo.indirections);
     if (typeInfo.isReference)
         metaType->setReferenceType(LValueReference);
     metaType->setConstant(typeInfo.isConstant);
     if (isTemplate) {
         for (const QString& templateArg : qAsConst(templateArgs)) {
-            AbstractMetaType *metaArgType = nullptr;
-            if (templateArg != QLatin1String("void")) {
-                metaArgType = translateType(AddedFunction::TypeInfo::fromSignature(templateArg), errorMessage);
-                if (!metaArgType)
-                    return nullptr;
-            }
+            AbstractMetaType *metaArgType = translateType(AddedFunction::TypeInfo::fromSignature(templateArg), errorMessage);
+            if (!metaArgType)
+                return nullptr;
             metaType->addInstantiation(metaArgType);
         }
         metaType->setTypeUsagePattern(AbstractMetaType::ContainerPattern);
+    } else {
+        metaType->decideUsagePattern();
     }
 
     return metaType;
@@ -2093,6 +2114,20 @@ TypeEntries AbstractMetaBuilderPrivate::findTypeEntries(const QString &qualified
     return {};
 }
 
+// Reverse lookup of AbstractMetaType representing a template specialization
+// found during traversing function arguments to its type system typedef'ed
+// class.
+const AbstractMetaClass *AbstractMetaBuilderPrivate::resolveTypeSystemTypeDef(const AbstractMetaType *t) const
+{
+    if (t->hasInstantiations()) {
+        auto pred = [t](const TypeClassEntry &e) { return e.type->compare(*t); };
+        auto it = std::find_if(m_typeSystemTypeDefs.cbegin(), m_typeSystemTypeDefs.cend(), pred);
+        if (it != m_typeSystemTypeDefs.cend())
+            return it->klass;
+    }
+    return nullptr;
+}
+
 AbstractMetaType *AbstractMetaBuilderPrivate::translateType(const TypeInfo &_typei,
                                                             AbstractMetaClass *currentClass,
                                                             TranslateTypeFlags flags,
@@ -2113,6 +2148,9 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo
                                                                   TranslateTypeFlags flags,
                                                                   QString *errorMessageIn)
 {
+    if (_typei.isVoid())
+        return AbstractMetaType::createVoid();
+
     // 1. Test the type info without resolving typedefs in case this is present in the
     //    type system
     const bool resolveType = !flags.testFlag(AbstractMetaBuilder::DontResolveType);
@@ -2325,6 +2363,16 @@ AbstractMetaType *AbstractMetaBuilderPrivate::translateTypeStatic(const TypeInfo
     // AbstractMetaType::cppSignature().
     metaType->decideUsagePattern();
 
+    if (d) {
+        // Reverse lookup of type system typedefs. Replace by class.
+        if (auto klass = d->resolveTypeSystemTypeDef(metaType.data())) {
+            metaType.reset(new AbstractMetaType);
+            metaType->setTypeEntry(klass->typeEntry());
+            metaType->decideUsagePattern();
+        }
+    }
+
+    Q_ASSERT(metaType->typeUsagePattern() != AbstractMetaType::InvalidPattern);
     return metaType.take();
 }
 
@@ -2615,18 +2663,7 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
                                                  const TypeInfo &info)
 {
     QVector<TypeInfo> targs = info.instantiations();
-    QVector<AbstractMetaType *> templateTypes;
-    QString errorMessage;
-
-    if (subclass->isTypeDef()) {
-        subclass->setHasCloneOperator(templateClass->hasCloneOperator());
-        subclass->setHasEqualsOperator(templateClass->hasEqualsOperator());
-        subclass->setHasHashFunction(templateClass->hasHashFunction());
-        subclass->setHasNonPrivateConstructor(templateClass->hasNonPrivateConstructor());
-        subclass->setHasPrivateDestructor(templateClass->hasPrivateDestructor());
-        subclass->setHasProtectedDestructor(templateClass->hasProtectedDestructor());
-        subclass->setHasVirtualDestructor(templateClass->hasVirtualDestructor());
-    }
+    AbstractMetaTypeList  templateTypes;
 
     for (const TypeInfo &i : qAsConst(targs)) {
         QString typeName = i.qualifiedName().join(colonColon());
@@ -2658,8 +2695,7 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
         }
 
         if (t) {
-            auto *temporaryType = new AbstractMetaType;
-            temporaryType->setTypeEntry(t);
+            auto *temporaryType = new AbstractMetaType(t);
             temporaryType->setConstant(i.isConstant());
             temporaryType->setReferenceType(i.referenceType());
             temporaryType->setIndirectionsV(i.indirectionsV());
@@ -2672,6 +2708,28 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
         }
     }
 
+    subclass->setTemplateBaseClass(templateClass);
+    subclass->setTemplateBaseClassInstantiations(templateTypes);
+    subclass->setBaseClass(templateClass->baseClass());
+    return true;
+}
+
+void AbstractMetaBuilderPrivate::inheritTemplateFunctions(AbstractMetaClass *subclass)
+{
+    QString errorMessage;
+    auto templateClass = subclass->templateBaseClass();
+
+    if (subclass->isTypeDef()) {
+        subclass->setHasCloneOperator(templateClass->hasCloneOperator());
+        subclass->setHasEqualsOperator(templateClass->hasEqualsOperator());
+        subclass->setHasHashFunction(templateClass->hasHashFunction());
+        subclass->setHasNonPrivateConstructor(templateClass->hasNonPrivateConstructor());
+        subclass->setHasPrivateDestructor(templateClass->hasPrivateDestructor());
+        subclass->setHasProtectedDestructor(templateClass->hasProtectedDestructor());
+        subclass->setHasVirtualDestructor(templateClass->hasVirtualDestructor());
+    }
+
+    const auto &templateTypes = subclass->templateBaseClassInstantiations();
     const AbstractMetaFunctionList &subclassFuncs = subclass->functions();
     const AbstractMetaFunctionList &templateClassFunctions = templateClass->functions();
     for (const AbstractMetaFunction *function : templateClassFunctions) {
@@ -2685,7 +2743,7 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
         QScopedPointer<AbstractMetaFunction> f(function->copy());
         f->setArguments(AbstractMetaArgumentList());
 
-        if (function->type()) { // Non-void
+        if (!function->isVoid()) {
             AbstractMetaType *returnType = inheritTemplateType(templateTypes, function->type());
             if (!returnType)
                 continue;
@@ -2774,12 +2832,6 @@ bool AbstractMetaBuilderPrivate::inheritTemplate(AbstractMetaClass *subclass,
         f->replaceType(fieldType);
         subclass->addField(f.take());
     }
-
-    subclass->setTemplateBaseClass(templateClass);
-    subclass->setTemplateBaseClassInstantiations(templateTypes);
-    subclass->setBaseClass(templateClass->baseClass());
-
-    return true;
 }
 
 void AbstractMetaBuilderPrivate::parseQ_Properties(AbstractMetaClass *metaClass,
@@ -2787,8 +2839,9 @@ void AbstractMetaBuilderPrivate::parseQ_Properties(AbstractMetaClass *metaClass,
 {
     const QStringList scopes = currentScope()->qualifiedName();
     QString errorMessage;
-    for (int i = 0; i < declarations.size(); ++i) {
-        if (auto spec = parseQ_Property(metaClass, declarations.at(i), scopes, &errorMessage)) {
+    int i = 0;
+    for (; i < declarations.size(); ++i) {
+        if (auto spec = QPropertySpec::parseQ_Property(this, metaClass, declarations.at(i), scopes, &errorMessage)) {
             spec->setIndex(i);
             metaClass->addPropertySpec(spec);
         } else {
@@ -2798,61 +2851,26 @@ void AbstractMetaBuilderPrivate::parseQ_Properties(AbstractMetaClass *metaClass,
             qCWarning(lcShiboken, "%s", qPrintable(message));
         }
     }
-}
 
-QPropertySpec *AbstractMetaBuilderPrivate::parseQ_Property(AbstractMetaClass *metaClass,
-                                                           const QString &declaration,
-                                                           const QStringList &scopes,
-                                                           QString *errorMessage)
-{
-    errorMessage->clear();
+    // User-added properties
+    auto typeEntry = metaClass->typeEntry();
+    for (const TypeSystemProperty &tp : typeEntry->properties()) {
+        QPropertySpec *spec = nullptr;
+        if (metaClass->propertySpecByName(tp.name))
+            errorMessage = msgPropertyExists(metaClass->name(), tp.name);
+        else
+            spec = QPropertySpec::fromTypeSystemProperty(this, metaClass, tp, scopes, &errorMessage);
 
-    // Q_PROPERTY(QString objectName READ objectName WRITE setObjectName NOTIFY objectNameChanged)
-
-    auto propertyTokens = declaration.splitRef(QLatin1Char(' '), Qt::SkipEmptyParts);
-    if (propertyTokens.size()  < 4) {
-        *errorMessage = QLatin1String("Insufficient number of tokens");
-        return nullptr;
+        if (spec) {
+            spec->setIndex(i++);
+            metaClass->addPropertySpec(spec);
+        } else {
+            QString message;
+            QTextStream str(&message);
+            str << typeEntry->sourceLocation() << errorMessage;
+            qCWarning(lcShiboken, "%s", qPrintable(message));
+        }
     }
-
-    const QString typeName = propertyTokens.takeFirst().toString();
-    const QString name = propertyTokens.takeFirst().toString();
-
-    QScopedPointer<AbstractMetaType> type;
-    for (int j = scopes.size(); j >= 0 && type.isNull(); --j) {
-        QStringList qualifiedName = scopes.mid(0, j);
-        qualifiedName.append(typeName);
-        TypeInfo info;
-        info.setQualifiedName(qualifiedName);
-        type.reset(translateType(info, metaClass));
-    }
-
-    if (!type) {
-        QTextStream str(errorMessage);
-        str << "Unable to decide type of property: \"" << name << "\" ("
-            <<  typeName << ')';
-        return nullptr;
-    }
-
-    QScopedPointer<QPropertySpec> spec(new QPropertySpec(type->typeEntry()));
-    spec->setName(name);
-
-    for (int pos = 0; pos + 1 < propertyTokens.size(); pos += 2) {
-        if (propertyTokens.at(pos) == QLatin1String("READ"))
-            spec->setRead(propertyTokens.at(pos + 1).toString());
-        else if (propertyTokens.at(pos) == QLatin1String("WRITE"))
-            spec->setWrite(propertyTokens.at(pos + 1).toString());
-        else if (propertyTokens.at(pos) == QLatin1String("DESIGNABLE"))
-            spec->setDesignable(propertyTokens.at(pos + 1).toString());
-        else if (propertyTokens.at(pos) == QLatin1String("RESET"))
-            spec->setReset(propertyTokens.at(pos + 1).toString());
-    }
-
-    if (!spec->isValid()) {
-        *errorMessage = QLatin1String("Incomplete specification");
-        return nullptr;
-    }
-    return spec.take();
 }
 
 static AbstractMetaFunction* findCopyCtor(AbstractMetaClass* cls)
@@ -2995,6 +3013,19 @@ static ClassIndexHash::ConstIterator findByTypeEntry(const ClassIndexHash &map,
     return it;
 }
 
+// Add a dependency of the class associated with typeEntry on clazz
+static void addClassDependency(const TypeEntry *typeEntry,
+                               const AbstractMetaClass *clazz,
+                               int classIndex, const  ClassIndexHash &map,
+                               Graph *graph)
+{
+    if (typeEntry->isComplex() && typeEntry != clazz->typeEntry()) {
+        const auto it = findByTypeEntry(map, typeEntry);
+        if (it != map.cend() && it.key()->enclosingClass() != clazz)
+            graph->addEdge(it.value(), classIndex);
+    }
+}
+
 AbstractMetaClassList AbstractMetaBuilderPrivate::classesTopologicalSorted(const AbstractMetaClassList &classList,
                                                                            const Dependencies &additionalDependencies) const
 {
@@ -3047,14 +3078,16 @@ AbstractMetaClassList AbstractMetaBuilderPrivate::classesTopologicalSorted(const
                 // ("QString s = QString()"), add a dependency.
                 if (!arg->originalDefaultValueExpression().isEmpty()
                     && arg->type()->isValue()) {
-                    auto typeEntry = arg->type()->typeEntry();
-                    if (typeEntry->isComplex() && typeEntry != clazz->typeEntry()) {
-                        auto ait = findByTypeEntry(map, typeEntry);
-                            if (ait != map.cend() && ait.key()->enclosingClass() != clazz)
-                                graph.addEdge(ait.value(), classIndex);
-                    }
+                    addClassDependency(arg->type()->typeEntry(), clazz, classIndex,
+                                       map, &graph);
                 }
             }
+        }
+        // Member fields need to be initialized
+        const AbstractMetaFieldList &fields = clazz->fields();
+        for (AbstractMetaField *field : fields) {
+            addClassDependency(field->type()->typeEntry(), clazz, classIndex,
+                               map, &graph);
         }
     }
 

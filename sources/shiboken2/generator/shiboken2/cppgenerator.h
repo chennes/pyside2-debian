@@ -81,6 +81,8 @@ private:
 
     void writeContainerConverterFunctions(QTextStream &s, const AbstractMetaType *containerType);
 
+    void writeSmartPointerConverterFunctions(QTextStream &s, const AbstractMetaType *smartPointerType);
+
     void writeMethodWrapperPreamble(QTextStream &s, OverloadData &overloadData,
                                     const GeneratorContext &context);
     void writeConstructorWrapper(QTextStream &s, const AbstractMetaFunctionList &overloads,
@@ -290,8 +292,19 @@ private:
     void writeGetterFunction(QTextStream &s,
                              const AbstractMetaField *metaField,
                              const GeneratorContext &context);
+    void writeGetterFunction(QTextStream &s,
+                             const QPropertySpec *property,
+                             const GeneratorContext &context);
+    void writeSetterFunctionPreamble(QTextStream &s,
+                                     const QString &name,
+                                     const QString &funcName,
+                                     const AbstractMetaType *type,
+                                     const GeneratorContext &context);
     void writeSetterFunction(QTextStream &s,
                              const AbstractMetaField *metaField,
+                             const GeneratorContext &context);
+    void writeSetterFunction(QTextStream &s,
+                             const QPropertySpec *property,
                              const GeneratorContext &context);
 
     void writeRichCompareFunction(QTextStream &s, const GeneratorContext &context);
@@ -305,6 +318,7 @@ private:
     void writeFlagsToLong(QTextStream &s, const AbstractMetaEnum *cppEnum);
     void writeFlagsNonZero(QTextStream &s, const AbstractMetaEnum *cppEnum);
     void writeFlagsNumberMethodsDefinition(QTextStream &s, const AbstractMetaEnum *cppEnum);
+    void writeFlagsNumberMethodsDefinitions(QTextStream &s, const AbstractMetaEnumList &enums);
     void writeFlagsBinaryOperator(QTextStream &s, const AbstractMetaEnum *cppEnum,
                                   const QString &pyOpName, const QString &cppOpName);
     void writeFlagsUnaryOperator(QTextStream &s, const AbstractMetaEnum *cppEnum,
@@ -320,6 +334,7 @@ private:
     void writeEnumConverterInitialization(QTextStream &s, const TypeEntry *enumType);
     void writeEnumConverterInitialization(QTextStream &s, const AbstractMetaEnum *metaEnum);
     void writeContainerConverterInitialization(QTextStream &s, const AbstractMetaType *type);
+    void writeSmartPointerConverterInitialization(QTextStream &s, const AbstractMetaType *type);
     void writeExtendedConverterInitialization(QTextStream &s, const TypeEntry *externalType, const QVector<const AbstractMetaClass *>& conversions);
 
     void writeParentChildManagement(QTextStream &s, const AbstractMetaFunction *func, bool userHeuristicForReturn);
@@ -362,6 +377,8 @@ private:
     const AbstractMetaFunction *boolCast(const AbstractMetaClass *metaClass) const;
     bool hasBoolCast(const AbstractMetaClass *metaClass) const
     { return boolCast(metaClass) != nullptr; }
+
+    const AbstractMetaType *findSmartPointerInstantiation(const TypeEntry *entry) const;
 
     // Number protocol structure members names.
     static QHash<QString, QString> m_nbFuncs;

@@ -356,6 +356,9 @@ struct FunctionModification: public Modification
     TypeSystem::ExceptionHandling exceptionHandling() const { return m_exceptionHandling; }
     void setExceptionHandling(TypeSystem::ExceptionHandling e) { m_exceptionHandling = e; }
 
+    int overloadNumber() const { return m_overloadNumber; }
+    void setOverloadNumber(int overloadNumber) { m_overloadNumber = overloadNumber; }
+
     QString toString() const;
 
 #ifndef QT_NO_DEBUG_STREAM
@@ -371,6 +374,7 @@ private:
     QString m_signature;
     QString m_originalSignature;
     QRegularExpression m_signaturePattern;
+    int m_overloadNumber = TypeSystem::OverloadNumberUnset;
     bool m_thread = false;
     AllowThread m_allowThread = AllowThread::Unspecified;
     TypeSystem::ExceptionHandling m_exceptionHandling = TypeSystem::ExceptionHandling::Unspecified;
@@ -549,6 +553,20 @@ private:
 class CustomConversion;
 class TypeSystemTypeEntry;
 
+struct TypeSystemProperty
+{
+    bool isValid() const { return !name.isEmpty() && !read.isEmpty() && !type.isEmpty(); }
+
+    QString type;
+    QString name;
+    QString read;
+    QString write;
+    QString reset;
+    QString designable;
+    // Indicates whether actual code is generated instead of relying on libpyside.
+    bool generateGetSetDef = false;
+};
+
 class TypeEntry
 {
     Q_GADGET
@@ -580,13 +598,10 @@ public:
     Q_ENUM(Type)
 
     enum CodeGeneration {
-        GenerateTargetLang      = 0x0001,
-        GenerateCpp             = 0x0002,
-        GenerateForSubclass     = 0x0004,
-
-        GenerateNothing         = 0,
-        GenerateAll             = 0xffff,
-        GenerateCode            = GenerateTargetLang | GenerateCpp
+        GenerateNothing,     // Rejection, private type, ConstantValueTypeEntry or similar
+        GenerationDisabled,  // generate='no' in type system
+        GenerateCode,        // Generate code
+        GenerateForSubclass, // Inherited from a loaded dependent type system.
     };
     Q_ENUM(CodeGeneration)
 
@@ -685,11 +700,11 @@ public:
     // Name as specified in XML
     QString entryName() const { return m_entryName; }
 
-    uint codeGeneration() const
+    CodeGeneration codeGeneration() const
     {
         return m_codeGeneration;
     }
-    void setCodeGeneration(uint cg)
+    void setCodeGeneration(CodeGeneration cg)
     {
         m_codeGeneration = cg;
     }
@@ -701,8 +716,7 @@ public:
     //       on 'load-typesystem' tag
     inline bool generateCode() const
     {
-        return m_codeGeneration != TypeEntry::GenerateForSubclass
-               && m_codeGeneration != TypeEntry::GenerateNothing;
+        return m_codeGeneration == GenerateCode;
     }
 
     int revision() const { return m_revision; }
@@ -786,7 +800,7 @@ public:
         return m_docModifications;
     }
 
-    IncludeList extraIncludes() const
+    const IncludeList &extraIncludes() const
     {
         return m_extraIncludes;
     }
@@ -879,7 +893,7 @@ private:
     QVersionNumber m_version;
     CustomConversion *m_customConversion = nullptr;
     SourceLocation m_sourceLocation; // XML file
-    uint m_codeGeneration = GenerateAll;
+    CodeGeneration m_codeGeneration = GenerateCode;
     int m_revision = 0;
     int m_sbkIndex = 0;
     Type m_type;
@@ -1252,6 +1266,9 @@ public:
         return m_fieldMods;
     }
 
+    const QList<TypeSystemProperty> &properties() const { return m_properties; }
+    void addProperty(const TypeSystemProperty &p) { m_properties.append(p); }
+
     QString defaultSuperclass() const
     {
         return m_defaultSuperclass;
@@ -1358,6 +1375,7 @@ private:
     AddedFunctionList m_addedFunctions;
     FunctionModificationList m_functionMods;
     FieldModificationList m_fieldMods;
+    QList<TypeSystemProperty> m_properties;
     QString m_defaultConstructor;
     QString m_defaultSuperclass;
     QString m_qualifiedCppName;
@@ -1527,6 +1545,9 @@ public:
     void formatDebug(QDebug &d) const override;
 #endif
 
+    bool generateUsing() const { return m_generateUsing; }
+    void setGenerateUsing(bool generateUsing) { m_generateUsing = generateUsing; }
+
 protected:
     NamespaceTypeEntry(const NamespaceTypeEntry &);
 
@@ -1536,6 +1557,7 @@ private:
     TypeSystem::Visibility m_visibility = TypeSystem::Visibility::Auto;
     bool m_hasPattern = false;
     bool m_inlineNamespace = false;
+    bool m_generateUsing = true; // Whether to generate "using namespace" into wrapper
 };
 
 class ValueTypeEntry : public ComplexTypeEntry

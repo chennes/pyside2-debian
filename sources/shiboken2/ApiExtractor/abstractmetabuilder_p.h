@@ -44,6 +44,12 @@ class TypeDatabase;
 class AbstractMetaBuilderPrivate
 {
 public:
+    struct TypeClassEntry
+    {
+        AbstractMetaTypeCPtr type;
+        const AbstractMetaClass *klass;
+    };
+
     using TranslateTypeFlags = AbstractMetaBuilder::TranslateTypeFlags;
 
     Q_DISABLE_COPY(AbstractMetaBuilderPrivate)
@@ -126,8 +132,6 @@ public:
     void fixReturnTypeOfConversionOperator(AbstractMetaFunction *metaFunction);
 
     void parseQ_Properties(AbstractMetaClass *metaClass, const QStringList &declarations);
-    QPropertySpec *parseQ_Property(AbstractMetaClass *metaClass, const QString &declaration,
-                                   const QStringList &scopes, QString *errorMessage);
     void setupEquals(AbstractMetaClass *metaClass);
     void setupComparable(AbstractMetaClass *metaClass);
     void setupClonable(AbstractMetaClass *cls);
@@ -164,6 +168,7 @@ public:
     bool inheritTemplate(AbstractMetaClass *subclass,
                          const AbstractMetaClass *templateClass,
                          const TypeInfo &info);
+    void inheritTemplateFunctions(AbstractMetaClass *subclass);
     AbstractMetaType *inheritTemplateType(const AbstractMetaTypeList &templateTypes,
                                           const AbstractMetaType *metaType);
 
@@ -176,6 +181,7 @@ public:
     void fixArgumentNames(AbstractMetaFunction *func, const FunctionModificationList &mods);
 
     void fillAddedFunctions(AbstractMetaClass *metaClass);
+    const AbstractMetaClass *resolveTypeSystemTypeDef(const AbstractMetaType *t) const;
 
     AbstractMetaBuilder *q;
     AbstractMetaClassList m_metaClasses;
@@ -202,6 +208,7 @@ public:
     QFileInfoList m_globalHeaders;
     QStringList m_headerPaths;
     mutable QHash<QString, Include> m_resolveIncludeHash;
+    QVector<TypeClassEntry> m_typeSystemTypeDefs; // look up metatype->class for type system typedefs
     bool m_skipDeprecated = false;
 };
 

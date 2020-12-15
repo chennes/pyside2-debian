@@ -274,7 +274,9 @@ def read_config_python_binary():
     binary = read_config(PYTHON_KEY)
     if binary:
         return binary
-    return 'python3' if which('python3') else 'python'
+    # Use 'python3' unless virtualenv is set
+    use_py3 = (not os.environ.get('VIRTUAL_ENV') and which('python3'))
+    return 'python3' if use_py3 else 'python'
 
 
 def get_config_file(base_name):
@@ -391,7 +393,7 @@ if __name__ == '__main__':
         build_mode = BuildMode.RECONFIGURE
 
     if build_mode == BuildMode.NONE and not (options.clean or options.reset
-        or options.pull or options.test):
+                                             or options.pull or options.test):
         argument_parser.print_help()
         sys.exit(0)
 

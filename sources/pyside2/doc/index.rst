@@ -3,20 +3,30 @@
 
 .. ifconfig:: output_format == 'html'
 
-    **Qt for Python** offers the official Python bindings for `Qt`_ (`PySide2`_),
-    so that you can use Qt5 APIs in your Python applications, and a binding generator tool
-    (`Shiboken2 <shiboken2/index.html>`_) which can be used to expose C++ projects into Python.
+    **Qt for Python** offers the official Python bindings for `Qt`_, and
+    has two main components:
+
+    * `PySide2`_, so that you can use Qt5 APIs in your Python applications, and
+    * `Shiboken2 <shiboken2/index.html>`__, a binding generator tool, which can
+      be used to expose C++ projects to Python, and a Python module with
+      some utility functions.
 
 .. ifconfig:: output_format == 'qthelp'
 
-    **Qt for Python** offers the official Python bindings for `Qt`_ (`PySide2`_),
-    so that you can use Qt5 APIs in your Python applications, and a binding generator tool
-    (`Shiboken2 <../shiboken2/index.html>`_) which can be used to expose C++ projects into Python.
+    **Qt for Python** offers the official Python bindings for `Qt`_, and
+    has two main components:
 
-|project| is available under the LGPLv3/GPLv3 and the Qt commercial license.
+    * `PySide2`_, so that you can use Qt5 APIs in your Python applications, and
+    * `Shiboken2 <../shiboken2/index.html>`__, a binding generator tool, which can
+      be used to expose C++ projects to Python, and a Python module with
+      some utility functions.
+
+This project is available under the LGPLv3/GPLv3 and the `Qt commercial license`_.
 
 .. _Qt: https://doc.qt.io
 .. _PySide2: quickstart.html
+.. _`Qt commercial license`: https://www.qt.io/licensing/
+
 
 
 Documentation
@@ -79,6 +89,10 @@ Documentation
                 <td><a href="../shiboken2/index.html" style="display: block;"><p><strong>Shiboken</strong><br/>Generate C++ to Python binding.</p></a></td>
             </tr>
         </table>
+
+We have also a `wiki page`_ where you can find how to report bugs, contribute or contact the community.
+
+.. _`wiki page`: https://wiki.qt.io/Qt_for_Python
 
 .. toctree::
    :hidden:

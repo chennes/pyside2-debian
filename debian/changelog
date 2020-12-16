@@ -2,6 +2,7 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
 
   [ Dmitry Shachnev ]
   * New upstream release.
+  * Drop python3.9.patch, included in the new release.
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 16 Dec 2020 20:21:03 +0300
 

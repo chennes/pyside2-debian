@@ -31,10 +31,10 @@ Last-Update: 2018-07-09
  3 files changed, 1673 insertions(+), 505 deletions(-)
 
 diff --git a/build_scripts/main.py b/build_scripts/main.py
-index 674048e..e638724 100644
+index ea91ef7..0501955 100644
 --- a/build_scripts/main.py
 +++ b/build_scripts/main.py
-@@ -873,7 +873,18 @@ class PysideBuild(_build):
+@@ -715,7 +715,18 @@ class PysideBuild(_build, DistUtilsCommandMixin):
              return
          log.info("Building patchelf...")
          module_src_dir = os.path.join(self.sources_dir, "patchelf")

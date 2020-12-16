@@ -8,6 +8,7 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
     support it.
   * Build with system patchelf on all architectures. It is now available on
     mipsel and mips64el too.
+    - Drop update-patchelf.patch, not needed with system patchelf.
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 16 Dec 2020 20:21:03 +0300
 

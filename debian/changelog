@@ -6,6 +6,8 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
   * Rebase other patches.
   * Backport upstream changes to pass --reuse-build only to commands that
     support it.
+  * Build with system patchelf on all architectures. It is now available on
+    mipsel and mips64el too.
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 16 Dec 2020 20:21:03 +0300
 

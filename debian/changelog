@@ -1,3 +1,10 @@
+pyside2 (5.15.2-1) UNRELEASED; urgency=medium
+
+  [ Dmitry Shachnev ]
+  * New upstream release.
+
+ -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 16 Dec 2020 20:21:03 +0300
+
 pyside2 (5.15.0-6) unstable; urgency=medium
 
   * Team upload.

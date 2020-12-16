@@ -4,6 +4,8 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
   * New upstream release.
   * Drop python3.9.patch, included in the new release.
   * Rebase other patches.
+  * Backport upstream changes to pass --reuse-build only to commands that
+    support it.
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 16 Dec 2020 20:21:03 +0300
 

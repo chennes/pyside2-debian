@@ -9,6 +9,7 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
   * Build with system patchelf on all architectures. It is now available on
     mipsel and mips64el too.
     - Drop update-patchelf.patch, not needed with system patchelf.
+  * Continue building HTML documentation (upstream defaults to qch now).
 
   [ Alexander Volkov ]
   * Add python3-pyside2.qt{quickcontrols2,remoteobjects,serialport} packages.

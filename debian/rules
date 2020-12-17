@@ -16,7 +16,7 @@ endif
 
 export PYBUILD_NAME=pyside2
 export PYBUILD_SYSTEM=distutils
-export PYBUILD_BUILD_ARGS=--relwithdebinfo --verbose-build --no-examples --build-tests --ignore-git $(OPTION_JOBS)
+export PYBUILD_BUILD_ARGS=--relwithdebinfo --verbose-build --no-examples --build-tests --doc-build-online --ignore-git $(OPTION_JOBS)
 
 export MAIN_VERSION_UPSTREAM := $(shell echo $(DEB_VERSION_UPSTREAM))
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all

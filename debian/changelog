@@ -11,6 +11,7 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
     - Drop update-patchelf.patch, not needed with system patchelf.
   * Continue building HTML documentation (upstream defaults to qch now).
   * Replace Qt Quick Controls 1 build-dependency with Qt Quick Controls 2.
+  * Build with default llvm version (closes: #974784).
 
   [ Alexander Volkov ]
   * Add python3-pyside2.qt{quickcontrols2,remoteobjects,serialport} packages.

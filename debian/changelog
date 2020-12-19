@@ -1,4 +1,4 @@
-pyside2 (5.15.2-1) UNRELEASED; urgency=medium
+pyside2 (5.15.2-1~exp1) experimental; urgency=medium
 
   [ Dmitry Shachnev ]
   * New upstream release.
@@ -21,7 +21,7 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
   [ Alexander Volkov ]
   * Add python3-pyside2.qt{quickcontrols2,remoteobjects,serialport} packages.
 
- -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 16 Dec 2020 20:21:03 +0300
+ -- Kurt Kremitzki <kkremitzki@debian.org>  Sat, 19 Dec 2020 14:26:09 -0600
 
 pyside2 (5.15.0-6) unstable; urgency=medium
 

@@ -16,6 +16,7 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
     libpyside2-py3-5.15 is not multi-arch ready because the list of built
     modules (in _config.py) may be different on different architectures.
   * Bump Qt build-dependencies to 5.15 (as ftbfs-old-qt.patch was dropped).
+  * Minor debian/rules cleanup.
 
   [ Alexander Volkov ]
   * Add python3-pyside2.qt{quickcontrols2,remoteobjects,serialport} packages.

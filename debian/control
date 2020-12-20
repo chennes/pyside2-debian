@@ -578,6 +578,18 @@ Description: Python bindings for Qt5 OpenGL module (Python 3)
  .
  This package contains Python 3 bindings for the QtOpenGL module.
 
+Package: python3-pyside2.qt3danimation
+Architecture: any
+Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
+ python3-pyside2.qtgui, python3-pyside2.qtcore, python3-pyside2.qtnetwork
+Description: Python bindings for Qt5 3DAnimation module (Python 3)
+ pyside2 provides Python bindings for Qt 5.x framework.
+ .
+ Qt is a cross-platform C++ application framework. Qt's primary feature
+ is its rich set of widgets that provide standard GUI functionality.
+ .
+ This package contains Python 3 bindings for the Qt3DAnimation module.
+
 Package: python3-pyside2.qt3dcore
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},

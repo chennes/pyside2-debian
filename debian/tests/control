@@ -122,6 +122,10 @@ Test-Command: debian/tests/test_install_python3.sh python3-pyside2.qtopengl PySi
 Depends: python3-pyside2.qtopengl, python3-all
 Restrictions: allow-stderr, superficial
 
+Test-Command: debian/tests/test_install_python3.sh python3-pyside2.qt3danimation PySide2.Qt3DAnimation
+Depends: python3-pyside2.qt3danimation, python3-all
+Restrictions: allow-stderr, superficial
+
 Test-Command: debian/tests/test_install_python3.sh python3-pyside2.qt3dcore PySide2.Qt3DCore
 Depends: python3-pyside2.qt3dcore, python3-all
 Restrictions: allow-stderr, superficial

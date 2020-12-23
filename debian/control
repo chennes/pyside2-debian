@@ -287,7 +287,7 @@ Description: Python bindings for Qt5 Qml module (Python 3)
 Package: python3-pyside2.qtwebenginecore
 Architecture: amd64 arm64 armhf i386 mipsel
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
- python3-pyside2.qtcore
+ python3-pyside2.qtcore, python3-pyside2.qtnetwork
 Description: Python bindings for Qt5 WebEngineCore module (Python 3)
  pyside2 provides Python bindings for Qt 5.x framework.
  .
@@ -581,7 +581,8 @@ Description: Python bindings for Qt5 OpenGL module (Python 3)
 Package: python3-pyside2.qt3danimation
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
- python3-pyside2.qtgui, python3-pyside2.qtcore, python3-pyside2.qtnetwork
+ python3-pyside2.qtgui, python3-pyside2.qtcore, python3-pyside2.qtnetwork,
+ python3-pyside2.qt3drender
 Description: Python bindings for Qt5 3DAnimation module (Python 3)
  pyside2 provides Python bindings for Qt 5.x framework.
  .
@@ -605,7 +606,8 @@ Description: Python bindings for Qt5 3DCore module (Python 3)
 Package: python3-pyside2.qt3dextras
 Architecture: any
 Depends: ${misc:Depends}, ${python3:Depends}, ${shlibs:Depends},
- python3-pyside2.qtgui, python3-pyside2.qtcore, python3-pyside2.qtnetwork
+ python3-pyside2.qtgui, python3-pyside2.qtcore, python3-pyside2.qtnetwork,
+ python3-pyside2.qt3drender
 Description: Python bindings for Qt5 3DExtras module (Python 3)
  pyside2 provides Python bindings for Qt 5.x framework.
  .

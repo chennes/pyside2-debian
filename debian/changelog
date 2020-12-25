@@ -2,6 +2,8 @@ pyside2 (5.15.2-1) UNRELEASED; urgency=medium
 
   [ Dmitry Shachnev ]
   * Add missing dependencies to make the autopkgtest pass again.
+  * Backport proposed upstream patch to fix qApp flags handling.
+    - Unblacklist QtWidgets::bug_307 test, it should not fail anymore.
 
  -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Wed, 23 Dec 2020 21:07:14 +0300
 

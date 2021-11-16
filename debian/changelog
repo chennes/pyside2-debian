@@ -1,12 +1,11 @@
-pyside2 (5.15.2-2) UNRELEASED; urgency=medium
+pyside2 (5.15.2-2) unstable; urgency=medium
 
-  [ Dmitry Shachnev ]
   * Backport upstream patches for Python 3.10 support (closes: #999369).
   * Backport upstream patch to adapt for LLVM 12.01.
   * Run build-time tests with all supported Python versions.
     - Add a patch to make the tests find the matching build directory.
 
- -- Debian Qt/KDE Maintainers <debian-qt-kde@lists.debian.org>  Mon, 15 Nov 2021 15:40:37 +0300
+ -- Dmitry Shachnev <mitya57@debian.org>  Tue, 16 Nov 2021 12:16:14 +0300
 
 pyside2 (5.15.2-1) unstable; urgency=medium
 

@@ -647,32 +647,38 @@ static void parse( MetaTranslator *tor, const char *initialContext,
                     bool plural = false;
                     if (!match(Tok_RightParen)) {
                         // look for comment
-                        if ( match(Tok_Comma) && matchStringOrNone(&com)) {
-                            if (!match(Tok_RightParen)) {
-                                // look for encoding
-                                if (match(Tok_Comma)) {
-                                    if (matchEncoding(&utf8)) {
-                                        if (!match(Tok_RightParen)) {
-                                            // look for the plural quantifier,
-                                            // this can be a number, an identifier or a function call,
-                                            // so for simplicity we mark it as plural if we know we have a comma instead of an
-                                            // right parentheses.
-                                            plural = match(Tok_Comma);
+                        if (match(Tok_Comma)) {
+                            // FreeCAD Custom Edit: Python allows (and Black implements)
+                            // commas as the final character inside a parenthesized
+                            // statement: so it's completely legal for there to be a comma,
+                            // but not have it followed by a comment. Support this by
+                            // breaking up the condition into two parts, the comma matching
+                            // and the comment search
+                            if (matchString(&com)) {
+                                if (!match(Tok_RightParen)) {
+                                    // look for encoding
+                                    if (match(Tok_Comma)) {
+                                        if (matchEncoding(&utf8)) {
+                                            if (!match(Tok_RightParen)) {
+                                                // look for the plural quantifier,
+                                                // this can be a number, an identifier or a function call,
+                                                // so for simplicity we mark it as plural if we know we have a comma instead of an
+                                                // right parentheses.
+                                                plural = match(Tok_Comma);
+                                            }
+                                        } else {
+                                            // This can be a QTranslator::translate("context", "source", "comment", n) plural translation
+                                            if (matchExpression() && match(Tok_RightParen)) {
+                                                plural = true;
+                                            } else {
+                                                break;
+                                            }
                                         }
                                     } else {
-                                        // This can be a QTranslator::translate("context", "source", "comment", n) plural translation
-                                        if (matchExpression() && match(Tok_RightParen)) {
-                                            plural = true;
-                                        } else {
-                                            break;
-                                        }
+                                        break;
                                     }
-                                } else {
-                                    break;
                                 }
                             }
-                        } else {
-                            break;
                         }
                     }
                     if (!text.isEmpty())
@@ -887,3 +893,4 @@ void fetchtr_ui( const char *fileName, MetaTranslator *tor,
     delete hand;
     f.close();
 }
+
